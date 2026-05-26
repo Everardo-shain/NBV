@@ -1,13 +1,15 @@
 """
 src/ranking.py
 --------------
-Ranking methodology from thesis Section 6.5 (Eq. 6.2 – 6.5).
+Ranking methodology.
 
-  ranking_decr(v) = 100 * |v - v_min| / v_min     lower raw value = better
-  ranking_incr(v) = 100 * |v - v_max| / v_max     higher raw value = better
+Rankings are computed WITHIN each group_id so that only comparable experiments
+(same scene + same optimization method) are ranked against each other.
+rank_group is used separately to aggregate results for the grouped table.
 
-  frank     = unweighted average of drank, erank, retrrank, qrank
-  totalrank = 0.7 * frank + 0.3 * timerank  (default, overridable per section)
+Group selection follows a two-stage lexicographic procedure:
+  1. Sort by success_count descending (n_s = number of valid sub-experiments)
+  2. Within same n_s, sort by mean totalrank of valid sub-experiments ascending
 """
 
 import numpy as np
@@ -33,22 +35,35 @@ def _safe_incr(series: pd.Series) -> pd.Series:
     return 100 * np.abs(series - v_max) / v_max
 
 
-def extract_summary(experiments: dict) -> pd.DataFrame:
+def extract_summary(experiments: dict, experiments_cfg: dict = None) -> pd.DataFrame:
     """
     Build one-row-per-experiment summary from a dict of {id: (meta, df)}.
-    Uses the last view's cumulative values as the final metric.
-    group_id is derived from experiment_id by dropping the last level
-    (e.g. "1.01.02" → "1.01"). For sections without sub-experiments,
-    group_id equals experiment_id.
+
+    group_id  : used for within-group ranking (same scene + method)
+    rank_group: used for aggregation in the grouped table (same parameter value)
     """
+    id_to_cfg = {}
+    if experiments_cfg:
+        for fname, ecfg in experiments_cfg.items():
+            id_to_cfg[ecfg["id"]] = ecfg
+
     rows = []
     for exp_id, (meta, df) in experiments.items():
         last = df.iloc[-1]
-        parts    = str(exp_id).split(".")
-        group_id = ".".join(parts[:-1]) if len(parts) > 2 else exp_id
+        ecfg = id_to_cfg.get(exp_id, {})
+
+        if "group_id" in ecfg:
+            group_id = ecfg["group_id"]
+        else:
+            parts    = str(exp_id).split(".")
+            group_id = ".".join(parts[:-1]) if len(parts) > 2 else exp_id
+
+        rank_group = ecfg.get("rank_group", group_id)
+
         rows.append({
             "experiment_id": exp_id,
             "group_id":      group_id,
+            "rank_group":    rank_group,
             "method":        meta.get("method", "unknown"),
             "scene":         Path(meta.get("scene", "")).stem,
             "acc_dist_m":    float(last["cum_travelled_m"]),
@@ -67,54 +82,66 @@ def compute_ranks(
     penalty_multiplier: float = 2.0,
 ) -> pd.DataFrame:
     """
-    Compute ranks for all experiments.
-    Invalid experiments (below threshold) are penalized instead of excluded.
+    Compute ranks WITHIN each group_id separately.
+    Invalid experiments (below threshold) are marked with is_valid=False
+    and receive a penalty totalrank, but are kept in the DataFrame.
     """
-    df = summary.copy()
+    results = []
 
-    # ── Split valid / invalid ─────────────────────────────────────────────────
-    if pct_threshold is not None:
-        valid_mask = df["pct_retrieved"] >= pct_threshold
-        valid_df   = df[valid_mask].copy()
-        invalid_df = df[~valid_mask].copy()
-        if valid_df.empty:
-            raise ValueError(f"No experiments passed {pct_threshold}% retrieval threshold.")
-    else:
-        valid_df   = df.copy()
-        invalid_df = pd.DataFrame()
+    for group_id, group_df in summary.groupby("group_id"):
+        group_df = group_df.copy()
 
-    # ── Rank valid experiments ────────────────────────────────────────────────
-    valid_df["drank"]    = _safe_decr(valid_df["acc_dist_m"])
-    valid_df["erank"]    = _safe_decr(valid_df["acc_energy"])
-    valid_df["retrrank"] = _safe_incr(valid_df["pct_retrieved"])
-    valid_df["qrank"]    = _safe_incr(valid_df["mean_quality"])
-    valid_df["timerank"] = _safe_decr(valid_df["total_time_s"])
-    valid_df["frank"]    = (valid_df["drank"] + valid_df["erank"] +
-                            valid_df["retrrank"] + valid_df["qrank"]) / 4.0
+        if pct_threshold is not None:
+            valid_mask = group_df["pct_retrieved"] >= pct_threshold
+            valid_df   = group_df[valid_mask].copy()
+            invalid_df = group_df[~valid_mask].copy()
+            if valid_df.empty:
+                rank_cols = ["drank", "erank", "retrrank", "qrank",
+                             "timerank", "frank", "totalrank"]
+                for col in rank_cols:
+                    group_df[col] = 0.0
+                group_df["totalrank"] = penalty_multiplier * 100.0
+                group_df["is_valid"]  = False
+                results.append(group_df)
+                continue
+        else:
+            valid_df   = group_df.copy()
+            invalid_df = pd.DataFrame()
 
-    if totalrank_formula is not None:
-        valid_df["totalrank"] = totalrank_formula(
-            valid_df["drank"], valid_df["erank"],
-            valid_df["retrrank"], valid_df["qrank"],
-            valid_df["timerank"],
-        )
-    else:
-        valid_df["totalrank"] = 0.7 * valid_df["frank"] + 0.3 * valid_df["timerank"]
+        # ── Rank valid experiments within this group only ─────────────────────
+        valid_df["drank"]    = _safe_decr(valid_df["acc_dist_m"])
+        valid_df["erank"]    = _safe_decr(valid_df["acc_energy"])
+        valid_df["retrrank"] = _safe_incr(valid_df["pct_retrieved"])
+        valid_df["qrank"]    = _safe_incr(valid_df["mean_quality"])
+        valid_df["timerank"] = _safe_decr(valid_df["total_time_s"])
+        valid_df["frank"]    = (valid_df["drank"] + valid_df["erank"] +
+                                valid_df["retrrank"] + valid_df["qrank"]) / 4.0
 
-    # ── Penalize invalid experiments ──────────────────────────────────────────
-    rank_cols = ["drank", "erank", "retrrank", "qrank", "timerank", "frank", "totalrank"]
-    if not invalid_df.empty:
-        totalrank_max = valid_df["totalrank"].max()
-        penalty       = penalty_multiplier * totalrank_max
-        for col in rank_cols:
-            invalid_df[col] = 0.0
-        invalid_df["totalrank"] = penalty
-        invalid_df["is_valid"]  = False        # ← marca inválidos
+        if totalrank_formula is not None:
+            valid_df["totalrank"] = totalrank_formula(
+                valid_df["drank"], valid_df["erank"],
+                valid_df["retrrank"], valid_df["qrank"],
+                valid_df["timerank"],
+            )
+        else:
+            valid_df["totalrank"] = 0.7 * valid_df["frank"] + 0.3 * valid_df["timerank"]
 
-    valid_df["is_valid"] = True                # ← marca válidos
+        valid_df["is_valid"] = True
 
-    # ── Recombine ─────────────────────────────────────────────────────────────
-    return pd.concat([valid_df, invalid_df]).sort_values("totalrank").reset_index(drop=True)
+        # ── Penalize invalid within this group ────────────────────────────────
+        rank_cols = ["drank", "erank", "retrrank", "qrank",
+                     "timerank", "frank", "totalrank"]
+        if not invalid_df.empty:
+            totalrank_max = valid_df["totalrank"].max()
+            penalty       = penalty_multiplier * totalrank_max
+            for col in rank_cols:
+                invalid_df[col] = 0.0
+            invalid_df["totalrank"] = penalty
+            invalid_df["is_valid"]  = False
+
+        results.append(pd.concat([valid_df, invalid_df]))
+
+    return pd.concat(results).sort_values("totalrank").reset_index(drop=True)
 
 
 def rank_experiments(
@@ -122,10 +149,11 @@ def rank_experiments(
     pct_threshold: float = None,
     totalrank_formula=None,
     penalty_multiplier: float = 2.0,
+    experiments_cfg: dict = None,
 ) -> pd.DataFrame:
-    """One-call pipeline: experiments dict → ranked summary DataFrame."""
+    """One-call pipeline: experiments dict -> ranked summary DataFrame."""
     return compute_ranks(
-        extract_summary(experiments),
+        extract_summary(experiments, experiments_cfg=experiments_cfg),
         pct_threshold=pct_threshold,
         totalrank_formula=totalrank_formula,
         penalty_multiplier=penalty_multiplier,
@@ -134,25 +162,60 @@ def rank_experiments(
 
 def rank_groups(ranked_df: pd.DataFrame, groups_cfg: dict) -> pd.DataFrame:
     """
-    Average totalrank by group_id (includes penalized invalid sub-experiments).
-    Also averages raw metrics for context columns in the grouped table.
+    Two-stage lexicographic group ranking (Eq. success_count / mean_totalrank):
+      1. success_count = number of valid sub-experiments (higher = better)
+      2. mean_totalrank over valid sub-experiments only (lower = better)
+
+    Also determines the winning criterion for table highlighting:
+      'success_count' if the winner was decided by n_s
+      'totalrank'     if decided by mean_totalrank (tie in n_s)
     """
-    grouped = (
-        ranked_df.groupby("group_id")["totalrank"]
-        .mean()
-        .reset_index()
-        .rename(columns={"group_id": "experiment_id", "totalrank": "mean_totalrank"})
-    )
+    if "rank_group" not in ranked_df.columns:
+        ranked_df = ranked_df.copy()
+        ranked_df["rank_group"] = ranked_df["group_id"]
 
-    raw_cols  = ["acc_dist_m", "acc_energy", "pct_retrieved", "mean_quality", "total_time_s"]
-    available = [c for c in raw_cols if c in ranked_df.columns]
-    raw_means = (
-        ranked_df.groupby("group_id")[available]
-        .mean()
-        .reset_index()
-        .rename(columns={"group_id": "experiment_id"})
-    )
+    rows = []
+    for rg in groups_cfg.keys():
+        sub = ranked_df[ranked_df["rank_group"] == rg]
 
-    grouped = grouped.merge(raw_means, on="experiment_id")
-    grouped = grouped.rename(columns={"mean_totalrank": "totalrank"})
-    return grouped.sort_values("totalrank").reset_index(drop=True)
+        if "is_valid" in sub.columns:
+            valid_sub     = sub[sub["is_valid"] == True]
+            success_count = len(valid_sub)
+        else:
+            valid_sub     = sub
+            success_count = len(sub)
+
+        mean_totalrank = valid_sub["totalrank"].mean() if not valid_sub.empty else float("nan")
+
+        raw_cols  = ["acc_dist_m", "acc_energy", "pct_retrieved",
+                     "mean_quality", "total_time_s"]
+        available = [c for c in raw_cols if c in valid_sub.columns]
+        raw_means = valid_sub[available].mean().to_dict() if not valid_sub.empty else {}
+
+        rows.append({
+            "experiment_id": rg,
+            "success_count": success_count,
+            "totalrank":     mean_totalrank,
+            **raw_means,
+        })
+
+    grouped = pd.DataFrame(rows)
+
+    # Lexicographic sort: success_count desc, then totalrank asc
+    grouped = grouped.sort_values(
+        ["success_count", "totalrank"],
+        ascending=[False, True],
+    ).reset_index(drop=True)
+
+    # Determine winning criterion
+    if len(grouped) > 1:
+        winner_ns   = grouped.iloc[0]["success_count"]
+        second_ns   = grouped.iloc[1]["success_count"]
+        winning_by  = "success_count" if winner_ns > second_ns else "totalrank"
+    else:
+        winning_by = "success_count"
+
+    grouped["winning_criterion"] = ""
+    grouped.at[grouped.index[0], "winning_criterion"] = winning_by
+
+    return grouped

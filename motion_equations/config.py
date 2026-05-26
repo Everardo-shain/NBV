@@ -1,5 +1,10 @@
 """
 motion_equations/config.py
+--------------
+group_id  : who competes against whom for ranking
+            (same scene + same optimization method)
+rank_group: how results are aggregated in the grouped table
+            (same parameter value, labeled G1-G7)
 """
 
 # ── Section identity ──────────────────────────────────────────────────────────
@@ -11,56 +16,52 @@ SECTION_META = {
 
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {
-    "lab_anne_d2_e2_73": {"id": "2.01.01", "group_id": "2.01", "environment": "Laboratory",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "lab_evol_d2_e2_73": {"id": "2.01.02", "group_id": "2.01", "environment": "Laboratory",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "stu_anne_d2_e2_73": {"id": "2.01.03", "group_id": "2.01", "environment": "Study Room",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "stu_evol_d2_e2_73": {"id": "2.01.04", "group_id": "2.01", "environment": "Study Room",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
+    "stu_evol_d2_e2_73": {"id": "2.01.01", "group_id": "2.01", "rank_group": "2.XX.01", "environment": "Study Room",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist1} + 0.3f_{energ1}$"},
+    "stu_evol_d2_e_73":  {"id": "2.01.02", "group_id": "2.01", "rank_group": "2.XX.02", "environment": "Study Room",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist1} + 0.3f_{energ2}$"},
+    "stu_evol_d_e2_73":  {"id": "2.01.03", "group_id": "2.01", "rank_group": "2.XX.03", "environment": "Study Room",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist2} + 0.3f_{energ1}$"},
+    "stu_evol_d_e_73":   {"id": "2.01.04", "group_id": "2.01", "rank_group": "2.XX.04", "environment": "Study Room",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist2} + 0.3f_{energ2}$"},
 
-    "lab_anne_d2_e_73":  {"id": "2.02.01", "group_id": "2.02", "environment": "Laboratory",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "lab_evol_d2_e_73":  {"id": "2.02.02", "group_id": "2.02", "environment": "Laboratory",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "stu_anne_d2_e_73":  {"id": "2.02.03", "group_id": "2.02", "environment": "Study Room",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "stu_evol_d2_e_73":  {"id": "2.02.04", "group_id": "2.02", "environment": "Study Room",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
+    "stu_anne_d2_e2_73": {"id": "2.02.01", "group_id": "2.02", "rank_group": "2.XX.01", "environment": "Study Room",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist1} + 0.3f_{energ1}$"},
+    "stu_anne_d2_e_73":  {"id": "2.02.02", "group_id": "2.02", "rank_group": "2.XX.02", "environment": "Study Room",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist1} + 0.3f_{energ2}$"},
+    "stu_anne_d_e2_73":  {"id": "2.02.03", "group_id": "2.02", "rank_group": "2.XX.03", "environment": "Study Room",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist2} + 0.3f_{energ1}$"},
+    "stu_anne_d_e_73":   {"id": "2.02.04", "group_id": "2.02", "rank_group": "2.XX.04", "environment": "Study Room",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist2} + 0.3f_{energ2}$"},
 
-    "lab_anne_d_e2_73":  {"id": "2.03.01", "group_id": "2.03", "environment": "Laboratory",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "lab_evol_d_e2_73":  {"id": "2.03.02", "group_id": "2.03", "environment": "Laboratory",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "stu_anne_d_e2_73":  {"id": "2.03.03", "group_id": "2.03", "environment": "Study Room",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "stu_evol_d_e2_73":  {"id": "2.03.04", "group_id": "2.03", "environment": "Study Room",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
+    "lab_evol_d2_e2_73": {"id": "2.03.01", "group_id": "2.03", "rank_group": "2.XX.01", "environment": "Laboratory",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist1} + 0.3f_{energ1}$"},
+    "lab_evol_d2_e_73":  {"id": "2.03.02", "group_id": "2.03", "rank_group": "2.XX.02", "environment": "Laboratory",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist1} + 0.3f_{energ2}$"},
+    "lab_evol_d_e2_73":  {"id": "2.03.03", "group_id": "2.03", "rank_group": "2.XX.03", "environment": "Laboratory",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist2} + 0.3f_{energ1}$"},
+    "lab_evol_d_e_73":   {"id": "2.03.04", "group_id": "2.03", "rank_group": "2.XX.04", "environment": "Laboratory",  "method": "(1+1)-ES",            "fmotion": r"$0.7f_{dist2} + 0.3f_{energ2}$"},
 
-    "lab_anne_d_e_73":   {"id": "2.04.01", "group_id": "2.04", "environment": "Laboratory",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "lab_evol_d_e_73":   {"id": "2.04.02", "group_id": "2.04", "environment": "Laboratory",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "stu_anne_d_e_73":   {"id": "2.04.03", "group_id": "2.04", "environment": "Study Room",  "method": "Simulated Annealing", "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "stu_evol_d_e_73":   {"id": "2.04.04", "group_id": "2.04", "environment": "Study Room",  "method": "(1+1)-ES",            "fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
+    "lab_anne_d2_e2_73": {"id": "2.04.01", "group_id": "2.04", "rank_group": "2.XX.01", "environment": "Laboratory",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist1} + 0.3f_{energ1}$"},
+    "lab_anne_d2_e_73":  {"id": "2.04.02", "group_id": "2.04", "rank_group": "2.XX.02", "environment": "Laboratory",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist1} + 0.3f_{energ2}$"},
+    "lab_anne_d_e2_73":  {"id": "2.04.03", "group_id": "2.04", "rank_group": "2.XX.03", "environment": "Laboratory",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist2} + 0.3f_{energ1}$"},
+    "lab_anne_d_e_73":   {"id": "2.04.04", "group_id": "2.04", "rank_group": "2.XX.04", "environment": "Laboratory",  "method": "Simulated Annealing", "fmotion": r"$0.7f_{dist2} + 0.3f_{energ2}$"},
 }
 
-# ── Groups ────────────────────────────────────────────────────────────────────
+# ── Groups (for grouped ranked table) ─────────────────────────────────────────
+# Keys match rank_group values in EXPERIMENTS
 GROUPS = {
-    "2.01": {"fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "2.02": {"fdist": r"Eq.~\ref{eq:fun_dist_1}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
-    "2.03": {"fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_1}"},
-    "2.04": {"fdist": r"Eq.~\ref{eq:fun_dist_2}", "fenerg": r"Eq.~\ref{eq:fun_energ_2}"},
+    "2.XX.01": {"fmotion": r"$0.7f_{dist1} + 0.3f_{energ1}$"},
+    "2.XX.02": {"fmotion": r"$0.7f_{dist1} + 0.3f_{energ2}$"},
+    "2.XX.03": {"fmotion": r"$0.7f_{dist2} + 0.3f_{energ1}$"},
+    "2.XX.04": {"fmotion": r"$0.7f_{dist2} + 0.3f_{energ2}$"},
 }
 
 GROUP_PARAMS_COLUMNS = [
-    ("fdist",  r"$f_{dist}$"),
-    ("fenerg", r"$f_{energ}$"),
+    ("fmotion",  r"$f_{motion}$"),
 ]
 
 # ── Parameters table columns ──────────────────────────────────────────────────
 PARAMS_COLUMNS = [
     ("environment", "Environment"),
     ("method",      "Local Opt. Method"),
-    ("fdist",       r"$f_{dist}$"),
-    ("fenerg",      r"$f_{energ}$"),
+    ("fmotion",  r"$f_{motion}$"),
 ]
-
 # ── Ranking configuration ─────────────────────────────────────────────────────
 PCT_THRESHOLD = 85.0
 
 TOTALRANK_FORMULA = lambda drank, erank, retrrank, qrank, timerank: (
     0.7 * ((drank + erank + retrrank + qrank) / 4.0) + 0.3 * timerank
 )
-
-PENALTY_MULTIPLIER = 2.0
 
 # ── Google Sheets ─────────────────────────────────────────────────────────────
 SPREADSHEET_ID = None

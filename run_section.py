@@ -8,7 +8,6 @@ Usage
 -----
   python run_section.py <section>
   python run_section.py area
-  python run_section.py motion_equations
 
   # Run all sections at once:
   python run_section.py --all
@@ -26,22 +25,20 @@ import pandas as pd
 from pathlib import Path
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
-# Make src/ importable regardless of where the script is called from
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from parser  import parse_log
-from ranking import rank_experiments
+from ranking import rank_experiments, extract_summary, rank_groups
 from tables  import save_tables
 from figures import save_all_figures
 
-SECTIONS = ["area", "motion_equations"]
+SECTIONS = ["area", "motion_equations", "motion_weights"]
 
 
 # ── Config loader ─────────────────────────────────────────────────────────────
 
 def load_config(section: str):
-    """Import <section>/config.py as a module and return it."""
     config_path = ROOT / section / "config.py"
     if not config_path.exists():
         raise FileNotFoundError(
@@ -57,7 +54,6 @@ def load_config(section: str):
 # ── Missing-files checker ─────────────────────────────────────────────────────
 
 def check_missing(section: str, cfg) -> list[str]:
-    """Return list of experiment keys whose log file does not exist yet."""
     logs_dir = ROOT / section / "logs"
     missing  = []
     for filename, exp_cfg in cfg.EXPERIMENTS.items():
@@ -88,7 +84,7 @@ def run_section(section: str, verbose: bool = True) -> None:
 
     # ── 2. Load available log files ───────────────────────────────────────────
     print(f"\n  Loading logs from {logs_dir}/")
-    experiments = {}   # {experiment_id: (meta_dict, df)}
+    experiments = {}
 
     for filename, exp_cfg in cfg.EXPERIMENTS.items():
         log_path = logs_dir / f"{filename}.log"
@@ -100,7 +96,7 @@ def run_section(section: str, verbose: bool = True) -> None:
             experiments[exp_id] = (log_meta, df)
             if verbose:
                 pct = df.iloc[-1]["tri_imaged_pct"]
-                print(f"    {exp_id:>6}  {filename:<25}  %retrieved={pct:.2f}")
+                print(f"    {exp_id:>9}  {filename:<28}  %retrieved={pct:.2f}")
         except Exception as e:
             print(f"    ERROR loading {filename}.log: {e}")
 
@@ -112,13 +108,14 @@ def run_section(section: str, verbose: bool = True) -> None:
     print(f"\n  Computing ranks  (threshold={cfg.PCT_THRESHOLD}%) ...")
     ranked = rank_experiments(
         experiments,
-        pct_threshold=cfg.PCT_THRESHOLD,
-        totalrank_formula=cfg.TOTALRANK_FORMULA,
-        penalty_multiplier=getattr(cfg, "PENALTY_MULTIPLIER", 2.0),
+        pct_threshold     = cfg.PCT_THRESHOLD,
+        totalrank_formula = cfg.TOTALRANK_FORMULA,
+        penalty_multiplier= getattr(cfg, "PENALTY_MULTIPLIER", 2.0),
+        experiments_cfg   = cfg.EXPERIMENTS,
     )
-    print(f"\n  Done with computing ranks  (threshold={cfg.PCT_THRESHOLD}%) ...")
+    print(f"  Done.")
 
-# ── 4. Tables ─────────────────────────────────────────────────────────────
+    # ── 4. Tables ─────────────────────────────────────────────────────────────
     print("\n  Exporting LaTeX tables ...")
 
     loaded_ids     = set(experiments.keys())
@@ -128,8 +125,7 @@ def run_section(section: str, verbose: bool = True) -> None:
         if exp_cfg["id"] in loaded_ids
     }
 
-    from ranking import extract_summary, rank_groups
-    full_summary = extract_summary(experiments)
+    full_summary = extract_summary(experiments, experiments_cfg=cfg.EXPERIMENTS)
 
     groups_cfg     = getattr(cfg, "GROUPS", None)
     grouped_ranked = None
@@ -147,51 +143,43 @@ def run_section(section: str, verbose: bool = True) -> None:
         params_columns       = getattr(cfg, "PARAMS_COLUMNS", None),
         groups_cfg           = groups_cfg,
         group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", None),
-        params_note = getattr(cfg, "PARAMS_NOTE", None),
+        params_note          = getattr(cfg, "PARAMS_NOTE", None),
         include_method       = False,
     )
-# ── 5. Excel export (Google Drive) ───────────────────────────────────────
+
+    # ── 5. Excel export (Google Drive) ───────────────────────────────────────
     GOOGLE_DRIVE_PATH = Path(r"G:\Mi unidad\NBV")
     GOOGLE_DRIVE_PATH.mkdir(parents=True, exist_ok=True)
-
     xlsx_path = GOOGLE_DRIVE_PATH / f"{meta['prefix']}.xlsx"
 
+    def sort_by_id(df):
+        df = df.copy()
+        df["_sort_key"] = df["experiment_id"].apply(
+            lambda x: [int(p) if p.isdigit() else p
+                       for p in str(x).replace("G", "").split(".")]
+        )
+        return df.sort_values("_sort_key").drop(columns="_sort_key").reset_index(drop=True)
+
     def write_sheet_as_table(writer, df, sheet_name, table_name):
-        """Write a DataFrame as a formatted Excel table."""
         df.to_excel(writer, sheet_name=sheet_name, index=False, float_format="%.6f")
-        ws = writer.sheets[sheet_name]
-        n_rows = len(df) + 1
-        n_cols = len(df.columns)
+        ws      = writer.sheets[sheet_name]
+        n_rows  = len(df) + 1
+        n_cols  = len(df.columns)
         last_col = ws.cell(1, n_cols).column_letter
-        table = Table(
-            displayName=table_name,
-            ref=f"A1:{last_col}{n_rows}",
-        )
-        table.tableStyleInfo = TableStyleInfo(
+        tbl = Table(displayName=table_name, ref=f"A1:{last_col}{n_rows}")
+        tbl.tableStyleInfo = TableStyleInfo(
             name="TableStyleMedium9",
-            showFirstColumn=False,
-            showLastColumn=False,
-            showRowStripes=True,
-            showColumnStripes=False,
+            showFirstColumn=False, showLastColumn=False,
+            showRowStripes=True,   showColumnStripes=False,
         )
-        ws.add_table(table)
+        ws.add_table(tbl)
 
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
-
-        # ── Summary sheets ────────────────────────────────────────────────────
-        # Sort all summary sheets by experiment_id
-        def sort_by_id(df):
-            df = df.copy()
-            df["_sort_key"] = df["experiment_id"].apply(
-                lambda x: [int(p) for p in str(x).split(".")]
-            )
-            return df.sort_values("_sort_key").drop(columns="_sort_key").reset_index(drop=True)
 
         write_sheet_as_table(writer, sort_by_id(full_summary), "summary_results", "tbl_results")
         write_sheet_as_table(writer, sort_by_id(ranked),       "summary_ranked",  "tbl_ranked")
 
         if grouped_ranked is not None and groups_cfg is not None:
-            # Build combined grouped table: params + totalrank only
             group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", [])
             combined_rows = []
             for gid, gdata in groups_cfg.items():
@@ -203,14 +191,13 @@ def run_section(section: str, verbose: bool = True) -> None:
                     "totalrank": totalrank_val,
                 })
             combined_df = pd.DataFrame(combined_rows)
-            # Sort by ID
             combined_df["_sort_key"] = combined_df["experiment_id"].apply(
-                lambda x: [int(p) for p in str(x).split(".")]
+                lambda x: [int(p) if p.isdigit() else p
+                           for p in str(x).replace("G", "").split(".")]
             )
             combined_df = combined_df.sort_values("_sort_key").drop(columns="_sort_key")
             write_sheet_as_table(writer, combined_df, "summary_grouped", "tbl_grouped")
 
-        # ── Per-view sheets — sorted by experiment_id ─────────────────────────
         for exp_id, (_, df) in sorted(
             experiments.items(),
             key=lambda x: [int(p) for p in str(x[0]).split(".")]
@@ -218,7 +205,7 @@ def run_section(section: str, verbose: bool = True) -> None:
             safe_id = exp_id.replace(".", "_")
             write_sheet_as_table(writer, df, safe_id, f"tbl_{safe_id}")
 
-    print(f"  Excel  → {xlsx_path}  (3 summary + {len(experiments)} per-view sheets)")
+    print(f"  Excel  → {xlsx_path}  ({len(experiments)} experiments + 3 summary sheets)")
 
     # ── 6. Figures ────────────────────────────────────────────────────────────
     print("\n  Generating figures ...")
@@ -245,8 +232,8 @@ def main():
         epilog="\n".join([
             "Examples:",
             "  python run_section.py area",
-            "  python run_section.py final --missing",
             "  python run_section.py --all",
+            "  python run_section.py area --missing",
         ]),
     )
     parser.add_argument(
@@ -254,14 +241,8 @@ def main():
         choices=SECTIONS,
         help=f"Section to run. One of: {', '.join(SECTIONS)}",
     )
-    parser.add_argument(
-        "--all", action="store_true",
-        help="Run all sections sequentially.",
-    )
-    parser.add_argument(
-        "--missing", action="store_true",
-        help="Only report missing log files; do not run the analysis.",
-    )
+    parser.add_argument("--all",     action="store_true", help="Run all sections.")
+    parser.add_argument("--missing", action="store_true", help="Only report missing logs.")
     args = parser.parse_args()
 
     if not args.all and args.section is None:
@@ -274,8 +255,7 @@ def main():
         if args.missing:
             cfg     = load_config(section)
             missing = check_missing(section, cfg)
-            header  = f"--- {section} ({len(cfg.EXPERIMENTS)} experiments) ---"
-            print(f"\n{header}")
+            print(f"\n--- {section} ({len(cfg.EXPERIMENTS)} experiments) ---")
             if missing:
                 print(f"  Missing ({len(missing)}):")
                 for m in missing:
