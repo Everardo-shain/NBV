@@ -100,7 +100,6 @@ Labels used in output filenames, LaTeX captions, and figure titles.
 SECTION_META = {
     "prefix":         "area",
     "caption_prefix": "Area factor",
-    "scene_name":     "Area factor",
 }
 ```
 

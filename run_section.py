@@ -33,7 +33,7 @@ from ranking import rank_experiments, extract_summary, rank_groups
 from tables  import save_tables
 from figures import save_all_figures
 
-SECTIONS = ["area", "motion_equations", "motion_weights"]
+SECTIONS = ["area", "motion_equations", "motion_weights", "quality", "final_validation"]
 
 
 # ── Config loader ─────────────────────────────────────────────────────────────
@@ -110,7 +110,6 @@ def run_section(section: str, verbose: bool = True) -> None:
         experiments,
         pct_threshold     = cfg.PCT_THRESHOLD,
         totalrank_formula = cfg.TOTALRANK_FORMULA,
-        penalty_multiplier= getattr(cfg, "PENALTY_MULTIPLIER", 2.0),
         experiments_cfg   = cfg.EXPERIMENTS,
     )
     print(f"  Done.")
@@ -214,10 +213,11 @@ def run_section(section: str, verbose: bool = True) -> None:
         ranked_df            = ranked,
         output_dir           = out_dir,
         prefix               = meta["prefix"],
-        scene_name           = meta.get("scene_name", ""),
+        scene_name           = meta.get("caption_prefix", ""),
         groups_cfg           = groups_cfg,
         grouped_df           = grouped_ranked,
         group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", None),
+        experiments_cfg      = loaded_exp_cfg,
     )
 
     print(f"\n  Done. All outputs in {out_dir}/")

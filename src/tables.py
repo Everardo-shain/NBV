@@ -20,18 +20,18 @@ import pandas as pd
 RESULTS_COLS = {
     "acc_dist_m":    (r"\thead{Acc.\\ dist. (m)}",  False, "r"),
     "acc_energy":    (r"\thead{Acc.\\ energy}",      False, "r"),
-    "pct_retrieved": (r"\thead{\%ret.}",             True,  "r"),
+    "pct_retrieved": (r"\thead{Retrieved\\  (\%))}",             True,  "r"),
     "mean_quality":  (r"\thead{Mean\\ quality}",     True,  "r"),
     "total_time_s":  (r"\thead{Time\\ (s)}",         False, "r"),
 }
 
 RANKED_COLS = {
-    "drank":     (r"$d_{rank}$",      False, "r"),
-    "erank":     (r"$e_{rank}$",      False, "r"),
-    "retrrank":  (r"$retr_{rank}$",   False, "r"),
-    "qrank":     (r"$q_{rank}$",      False, "r"),
-    "timerank":  (r"$time_{rank}$",   False, "r"),
-    "totalrank": (r"$total_{rank}$",  False, "r"),
+    "drank":     (r"$d_{\text{rank}}$",      False, "r"),
+    "erank":     (r"$e_{\text{rank}}$",      False, "r"),
+    "retrrank":  (r"$retr_{\text{rank}}$",   False, "r"),
+    "qrank":     (r"$q_{\text{rank}}$",      False, "r"),
+    "timerank":  (r"$time_{\text{rank}}$",   False, "r"),
+    "totalrank": (r"$total_{\text{rank}}$",  False, "r"),
 }
 
 HIGH_PRECISION_COLS = {"mean_quality", "tri_quality"}
@@ -299,7 +299,7 @@ def grouped_ranked_table(
     param_col_hdrs = {
         "id":            "ID",
         "success_count": rf"$n_s/{n_total}$",
-        "totalrank":     r"$\overline{total_{rank}}$",
+        "totalrank":     r"$\overline{total_{\text{rank}}}$",
     }
     param_col_hdrs.update({k: h for k, h in group_params_columns})
 
@@ -414,7 +414,7 @@ def save_tables(
         p = params_table(
             experiments_cfg,
             params_columns,
-            caption=f"{caption_prefix} experiment variable parameters.",
+            caption=f"{caption_prefix} Experiment Variable Parameters.",
             label=f"tab:{prefix}_params",
             note=params_note,
         )
@@ -430,7 +430,7 @@ def save_tables(
     results_df = _sort_by_id(base_df)
     res = results_table(
         results_df,
-        caption=f"{caption_prefix} experiment results.",
+        caption=f"{caption_prefix} Experiment Results.",
         label=f"tab:{prefix}_results",
         include_method=include_method,
     )
@@ -442,7 +442,7 @@ def save_tables(
     ranked_sorted = _sort_by_id(valid_ranked)
     rnk = ranked_table(
         ranked_sorted,
-        caption=f"{caption_prefix} experiment ranked results.",
+        caption=f"{caption_prefix} Experiment Ranked Results.",
         label=f"tab:{prefix}_ranked",
         include_method=include_method,
     )
@@ -454,7 +454,7 @@ def save_tables(
             groups_cfg,
             grouped_df,
             group_params_columns,
-            caption=f"{caption_prefix} grouped ranked results.",
+            caption=f"{caption_prefix} Grouped Ranked Results.",
             label=f"tab:{prefix}_grouped_ranked",
         )
         (tables_dir / f"{prefix}_grouped_ranked.tex").write_text(grp, encoding="utf-8")

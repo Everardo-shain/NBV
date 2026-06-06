@@ -10,55 +10,54 @@ rank_group: how results are aggregated in the grouped table
 # ── Section identity ──────────────────────────────────────────────────────────
 SECTION_META = {
     "prefix":         "area",
-    "caption_prefix": "Area factor",
-    "scene_name":     "Area factor",
+    "caption_prefix": "Area Factor",
 }
 
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {
-    "stu_evol_34": {"id": "1.01.01", "group_id": "1.01", "rank_group": "1.XX.01", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.34},
-    "stu_evol_40": {"id": "1.01.02", "group_id": "1.01", "rank_group": "1.XX.02", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.40},
-    "stu_evol_50": {"id": "1.01.03", "group_id": "1.01", "rank_group": "1.XX.03", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.50},
-    "stu_evol_60": {"id": "1.01.04", "group_id": "1.01", "rank_group": "1.XX.04", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.60},
-    "stu_evol_70": {"id": "1.01.05", "group_id": "1.01", "rank_group": "1.XX.05", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.70},
-    "stu_evol_80": {"id": "1.01.06", "group_id": "1.01", "rank_group": "1.XX.06", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.80},
-    "stu_evol_90": {"id": "1.01.07", "group_id": "1.01", "rank_group": "1.XX.07", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.90},
+    "stu_evol_34": {"id": "1.1.01", "group_id": "1.1", "rank_group": "1.Y.01", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.34},
+    "stu_evol_40": {"id": "1.1.02", "group_id": "1.1", "rank_group": "1.Y.02", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.40},
+    "stu_evol_50": {"id": "1.1.03", "group_id": "1.1", "rank_group": "1.Y.03", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.50},
+    "stu_evol_60": {"id": "1.1.04", "group_id": "1.1", "rank_group": "1.Y.04", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.60},
+    "stu_evol_70": {"id": "1.1.05", "group_id": "1.1", "rank_group": "1.Y.05", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.70},
+    "stu_evol_80": {"id": "1.1.06", "group_id": "1.1", "rank_group": "1.Y.06", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.80},
+    "stu_evol_90": {"id": "1.1.07", "group_id": "1.1", "rank_group": "1.Y.07", "environment": "Study Room",  "method": "(1+1)-ES", "alpha": 0.90},
 
-    "stu_anne_34": {"id": "1.02.01", "group_id": "1.02", "rank_group": "1.XX.01", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.34},
-    "stu_anne_40": {"id": "1.02.02", "group_id": "1.02", "rank_group": "1.XX.02", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.40},
-    "stu_anne_50": {"id": "1.02.03", "group_id": "1.02", "rank_group": "1.XX.03", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.50},
-    "stu_anne_60": {"id": "1.02.04", "group_id": "1.02", "rank_group": "1.XX.04", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.60},
-    "stu_anne_70": {"id": "1.02.05", "group_id": "1.02", "rank_group": "1.XX.05", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.70},
-    "stu_anne_80": {"id": "1.02.06", "group_id": "1.02", "rank_group": "1.XX.06", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.80},
-    "stu_anne_90": {"id": "1.02.07", "group_id": "1.02", "rank_group": "1.XX.07", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.90},
+    "stu_anne_34": {"id": "1.2.01", "group_id": "1.2", "rank_group": "1.Y.01", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.34},
+    "stu_anne_40": {"id": "1.2.02", "group_id": "1.2", "rank_group": "1.Y.02", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.40},
+    "stu_anne_50": {"id": "1.2.03", "group_id": "1.2", "rank_group": "1.Y.03", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.50},
+    "stu_anne_60": {"id": "1.2.04", "group_id": "1.2", "rank_group": "1.Y.04", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.60},
+    "stu_anne_70": {"id": "1.2.05", "group_id": "1.2", "rank_group": "1.Y.05", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.70},
+    "stu_anne_80": {"id": "1.2.06", "group_id": "1.2", "rank_group": "1.Y.06", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.80},
+    "stu_anne_90": {"id": "1.2.07", "group_id": "1.2", "rank_group": "1.Y.07", "environment": "Study Room",  "method": "Simulated Annealing", "alpha": 0.90},
 
-    "lab_evol_34": {"id": "1.03.01", "group_id": "1.03", "rank_group": "1.XX.01", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.34},
-    "lab_evol_40": {"id": "1.03.02", "group_id": "1.03", "rank_group": "1.XX.02", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.40},
-    "lab_evol_50": {"id": "1.03.03", "group_id": "1.03", "rank_group": "1.XX.03", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.50},
-    "lab_evol_60": {"id": "1.03.04", "group_id": "1.03", "rank_group": "1.XX.04", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.60},
-    "lab_evol_70": {"id": "1.03.05", "group_id": "1.03", "rank_group": "1.XX.05", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.70},
-    "lab_evol_80": {"id": "1.03.06", "group_id": "1.03", "rank_group": "1.XX.06", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.80},
-    "lab_evol_90": {"id": "1.03.07", "group_id": "1.03", "rank_group": "1.XX.07", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.90},
+    "lab_evol_34": {"id": "1.3.01", "group_id": "1.3", "rank_group": "1.Y.01", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.34},
+    "lab_evol_40": {"id": "1.3.02", "group_id": "1.3", "rank_group": "1.Y.02", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.40},
+    "lab_evol_50": {"id": "1.3.03", "group_id": "1.3", "rank_group": "1.Y.03", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.50},
+    "lab_evol_60": {"id": "1.3.04", "group_id": "1.3", "rank_group": "1.Y.04", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.60},
+    "lab_evol_70": {"id": "1.3.05", "group_id": "1.3", "rank_group": "1.Y.05", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.70},
+    "lab_evol_80": {"id": "1.3.06", "group_id": "1.3", "rank_group": "1.Y.06", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.80},
+    "lab_evol_90": {"id": "1.3.07", "group_id": "1.3", "rank_group": "1.Y.07", "environment": "Laboratory",  "method": "(1+1)-ES", "alpha": 0.90},
 
-    "lab_anne_34": {"id": "1.04.01", "group_id": "1.04", "rank_group": "1.XX.01", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.34},
-    "lab_anne_40": {"id": "1.04.02", "group_id": "1.04", "rank_group": "1.XX.02", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.40},
-    "lab_anne_50": {"id": "1.04.03", "group_id": "1.04", "rank_group": "1.XX.03", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.50},
-    "lab_anne_60": {"id": "1.04.04", "group_id": "1.04", "rank_group": "1.XX.04", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.60},
-    "lab_anne_70": {"id": "1.04.05", "group_id": "1.04", "rank_group": "1.XX.05", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.70},
-    "lab_anne_80": {"id": "1.04.06", "group_id": "1.04", "rank_group": "1.XX.06", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.80},
-    "lab_anne_90": {"id": "1.04.07", "group_id": "1.04", "rank_group": "1.XX.07", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.90},
+    "lab_anne_34": {"id": "1.4.01", "group_id": "1.4", "rank_group": "1.Y.01", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.34},
+    "lab_anne_40": {"id": "1.4.02", "group_id": "1.4", "rank_group": "1.Y.02", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.40},
+    "lab_anne_50": {"id": "1.4.03", "group_id": "1.4", "rank_group": "1.Y.03", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.50},
+    "lab_anne_60": {"id": "1.4.04", "group_id": "1.4", "rank_group": "1.Y.04", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.60},
+    "lab_anne_70": {"id": "1.4.05", "group_id": "1.4", "rank_group": "1.Y.05", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.70},
+    "lab_anne_80": {"id": "1.4.06", "group_id": "1.4", "rank_group": "1.Y.06", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.80},
+    "lab_anne_90": {"id": "1.4.07", "group_id": "1.4", "rank_group": "1.Y.07", "environment": "Laboratory",  "method": "Simulated Annealing", "alpha": 0.90},
 }
 
 # ── Groups (for grouped ranked table) ─────────────────────────────────────────
 # Keys match rank_group values in EXPERIMENTS
 GROUPS = {
-    "1.XX.01": {"alpha": 0.34},
-    "1.XX.02": {"alpha": 0.40},
-    "1.XX.03": {"alpha": 0.50},
-    "1.XX.04": {"alpha": 0.60},
-    "1.XX.05": {"alpha": 0.70},
-    "1.XX.06": {"alpha": 0.80},
-    "1.XX.07": {"alpha": 0.90},
+    "1.Y.01": {"alpha": 0.34},
+    "1.Y.02": {"alpha": 0.40},
+    "1.Y.03": {"alpha": 0.50},
+    "1.Y.04": {"alpha": 0.60},
+    "1.Y.05": {"alpha": 0.70},
+    "1.Y.06": {"alpha": 0.80},
+    "1.Y.07": {"alpha": 0.90},
 }
 
 GROUP_PARAMS_COLUMNS = [

@@ -5,14 +5,11 @@ Publication-quality figures for the NBV analysis pipeline.
 
 Figure outputs
 --------------
-  figures/internal/
-    {prefix}_comparison_grid.png
-    {prefix}_time_comparison.png
-    {prefix}_ranking.png
-
   figures/
     {prefix}_grouped_bar.png
     {prefix}_grouped_heatmap.png
+    comparison_grid/
+      {prefix}_{group_id}_comparison_grid.png   one per group_id (scene+method)
 """
 
 import matplotlib
@@ -45,7 +42,7 @@ plt.rcParams.update({
 })
 
 METRIC_CFG = {
-    "tri_imaged_pct":  (r"$\%retrieved$",           True),
+    "tri_imaged_pct":  ("Percentage retrieved (\%)",           True),
     "cum_travelled_m": ("Accumulated distance (m)",  False),
     "cum_energy":      ("Accumulated energy",         False),
     "tri_quality":     ("Mean quality",               True),
@@ -57,7 +54,7 @@ GRID_METRICS = [
     "tri_imaged_pct", "cum_travelled_m", "cum_energy", "tri_quality", "total_time",
 ]
 GRID_SUBTITLES = [
-    "(a) % Retrieved", "(b) Accumulated distance", "(c) Accumulated energy",
+    "(a) Percentage retrieved", "(b) Accumulated distance", "(c) Accumulated energy",
     "(d) Mean quality", "(e) Total time",
 ]
 
@@ -67,7 +64,7 @@ def _style(i):
             "marker": MARKERS[i % len(MARKERS)], "linewidth": 1.4, "markersize": 4}
 
 
-def _plot_metric(ax, experiments, metric, title=None, show_legend=True, marker_every=10):
+def _plot_metric(ax, experiments, metric, title=None, marker_every=10):
     ylabel, _ = METRIC_CFG.get(metric, (metric.replace("_", " "), True))
     for i, (label, (_, df)) in enumerate(experiments.items()):
         ax.plot(df["view"], df[metric], markevery=marker_every, label=label, **_style(i))
@@ -76,8 +73,6 @@ def _plot_metric(ax, experiments, metric, title=None, show_legend=True, marker_e
     if title:
         ax.set_title(title)
     ax.grid(True, linestyle="--", alpha=0.4)
-    if show_legend:
-        ax.legend(framealpha=0.8)
 
 
 def _save(fig, path):
@@ -87,71 +82,104 @@ def _save(fig, path):
     print(f"  Figure -> {path}")
 
 
-# ── Figure builders ───────────────────────────────────────────────────────────
+# ── Comparison grid (one per group_id) ───────────────────────────────────────
 
-def _build_comparison_grid(experiments, scene_name=""):
+def _build_comparison_grid_for_group(
+    experiments: dict,
+    group_id: str,
+    ranked_df: pd.DataFrame,
+    experiments_cfg: dict,
+    scene_name: str = "",
+) -> plt.Figure:
+    """
+    Build a 2x3 grid for a single group_id.
+    Rows/cols 0-4: the 5 metrics.
+    Cell [1,2] (index 5): legend panel.
+    Each line = one rank_group (parameter variant) within this group_id.
+    """
+    # Collect experiment IDs belonging to this group_id
+    group_exp_ids = {
+        ecfg["id"]: ecfg
+        for ecfg in experiments_cfg.values()
+        if ecfg.get("group_id") == group_id
+    }
+
+    # Build sub-experiments dict: {rank_group_label: (meta, df)}
+    sub_experiments = {}
+    for exp_id, ecfg in sorted(group_exp_ids.items(),
+                                key=lambda x: x[0]):
+        if exp_id in experiments:
+            rg    = ecfg.get("rank_group", exp_id)
+            sub_experiments[rg] = experiments[exp_id]
+
+    if not sub_experiments:
+        return None
+
     fig, axes = plt.subplots(2, 3, figsize=(13, 7.5))
     axes = axes.flatten()
+
     for idx, (metric, subtitle) in enumerate(zip(GRID_METRICS, GRID_SUBTITLES)):
-        _plot_metric(axes[idx], experiments, metric, title=subtitle, show_legend=False)
-    axes[5].set_visible(False)
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center",
-               bbox_to_anchor=(0.5, -0.04), ncol=min(len(handles), 4),
-               framealpha=0.9, fontsize=9)
+        _plot_metric(axes[idx], sub_experiments, metric, title=subtitle)
+        axes[idx].get_legend().remove() if axes[idx].get_legend() else None
+
+    # ── Cell 5: legend panel ──────────────────────────────────────────────────
+    ax_leg = axes[5]
+    ax_leg.set_axis_off()
+
+    handles = [
+        plt.Line2D([0], [0], label=label, **_style(i))
+        for i, label in enumerate(sub_experiments.keys())
+    ]
+    ax_leg.legend(
+        handles=handles,
+        loc="center",
+        title="Parameter group",
+        title_fontsize=10,
+        fontsize=9,
+        framealpha=0.9,
+        borderaxespad=0,
+    )
+
+    # Subtitle showing group context
+    group_label = f"Group {group_id}"
     if scene_name:
-        fig.suptitle(f"{scene_name} -- experiment graphs", fontsize=12, y=1.01)
+        group_label = f"{scene_name} — {group_label}"
+    fig.suptitle(group_label, fontsize=12, y=1.01)
     fig.tight_layout()
     return fig
 
 
-def _build_time_comparison(experiments, prefix):
-    labels = list(experiments.keys())
-    times  = [df.iloc[-1]["total_time"] for (_, df) in experiments.values()]
-    colors = [COLORS[i % len(COLORS)] for i in range(len(labels))]
-    fig, ax = plt.subplots(figsize=(max(4, len(labels) * 1.4), 4))
-    bars = ax.bar(labels, times, color=colors, edgecolor="black", linewidth=0.6)
-    ax.bar_label(bars, fmt="%.2f", padding=3, fontsize=9)
-    ax.set_ylabel("Total time (s)")
-    ax.set_title(f"{prefix} -- computation time")
-    ax.yaxis.set_minor_locator(mticker.AutoMinorLocator())
-    ax.grid(axis="y", linestyle="--", alpha=0.4)
-    ax.set_ylim(0, max(times) * 1.2)
-    fig.tight_layout()
-    return fig
+def save_comparison_grids(
+    experiments: dict,
+    ranked_df: pd.DataFrame,
+    experiments_cfg: dict,
+    output_dir: Path,
+    prefix: str,
+    scene_name: str = "",
+) -> None:
+    """
+    Save one comparison grid per group_id into figures/comparison_grid/.
+    """
+    if not experiments_cfg:
+        return
 
+    # Collect unique group_ids in sorted order
+    group_ids = sorted(
+        set(ecfg.get("group_id", "") for ecfg in experiments_cfg.values()
+            if ecfg.get("group_id")),
+        key=lambda x: [int(p) for p in str(x).split(".")],
+    )
 
-def _build_ranking_bar(ranked_df, prefix):
-    df     = ranked_df.sort_values("totalrank")
-    labels = df["experiment_id"].tolist()
-    ranks  = df["totalrank"].tolist()
-    colors = [COLORS[i % len(COLORS)] for i in range(len(labels))]
-    fig, ax = plt.subplots(figsize=(6, max(3, len(labels) * 0.7)))
-    bars = ax.barh(labels, ranks, color=colors, edgecolor="black", linewidth=0.6)
-    ax.bar_label(bars, fmt="%.3f", padding=3, fontsize=9)
-    ax.set_xlabel("Total rank (lower = better)")
-    ax.set_title(f"{prefix} -- total rank comparison")
-    ax.invert_yaxis()
-    ax.grid(axis="x", linestyle="--", alpha=0.4)
-    ax.set_xlim(0, max(ranks) * 1.2 if max(ranks) > 0 else 1)
-    fig.tight_layout()
-    return fig
+    grid_dir = output_dir / "figures" / "comparison_grid"
+    grid_dir.mkdir(parents=True, exist_ok=True)
 
-
-# ── Public save wrappers ──────────────────────────────────────────────────────
-
-def save_comparison_grid(experiments, output_dir, prefix, scene_name=""):
-    if len(experiments) >= 2:
-        _save(_build_comparison_grid(experiments, scene_name),
-              output_dir / "figures" / f"{prefix}_comparison_grid.png")
-
-def save_time_comparison(experiments, output_dir, prefix, title=""):
-    _save(_build_time_comparison(experiments, prefix),
-          output_dir / "figures" / f"{prefix}_time_comparison.png")
-
-def save_ranking_bar(ranked_df, output_dir, prefix, title=""):
-    _save(_build_ranking_bar(ranked_df, prefix),
-          output_dir / "figures" / f"{prefix}_ranking.png")
+    for gid in group_ids:
+        fig = _build_comparison_grid_for_group(
+            experiments, gid, ranked_df, experiments_cfg, scene_name
+        )
+        if fig is not None:
+            safe_gid = gid.replace(".", "_")
+            _save(fig, grid_dir / f"{prefix}_{safe_gid}_comparison_grid.png")
 
 
 # ── Grouped bar ───────────────────────────────────────────────────────────────
@@ -185,6 +213,7 @@ def save_grouped_bar(
         return
 
     # Winner: lexicographic (most successes, then lowest mean)
+    max_ns = max(success_counts) if success_counts else n_total
     if "success_count" in grouped_df.columns:
         sorted_winner = grouped_df.sort_values(
             ["success_count", "totalrank"], ascending=[False, True]
@@ -195,7 +224,8 @@ def save_grouped_bar(
                     if not grouped_df.empty else None
 
     colors  = [COLOR_BEST if lb == winner_id else COLOR_DEFAULT for lb in labels]
-    hatches = ["///" if sc < n_total else "" for sc in success_counts]
+    # Hatch only bars excluded from final comparison (ns < max observed ns)
+    hatches = ["///" if sc < max_ns else "" for sc in success_counts]
 
     x = np.arange(len(labels))
     fig, ax = plt.subplots(figsize=(max(5, len(labels) * 0.9), 4.5))
@@ -206,13 +236,17 @@ def save_grouped_bar(
                error_kw={"elinewidth": 1.2, "ecolor": "black"})
 
     for i, (m, s, ns) in enumerate(zip(means, stds, success_counts)):
-        txt = f"{m:.2f}" + (f"\n({ns}/{n_total})" if ns < n_total else "")
+        txt = f"{m:.2f}\n({ns}/{n_total})"
         ax.text(x[i], m + s + max(means) * 0.02, txt,
                 ha="center", va="bottom", fontsize=7)
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.set_xlabel("Parameter group")
+
+    # Build axis label from GROUP_PARAMS_COLUMNS header, stripping LaTeX for matplotlib
+    # Use param header directly as matplotlib mathtext (keep $ signs)
+    param_header = group_params_columns[0][1]
+    ax.set_xlabel(f"Parameter group ({param_header})")
     ax.set_ylabel("Mean total rank (lower = better)")
     ax.set_title(title or f"{prefix} -- grouped ranking")
     ax.grid(axis="y", linestyle="--", alpha=0.4)
@@ -225,7 +259,7 @@ def save_grouped_bar(
     if any(h for h in hatches):
         legend_handles.append(
             mpatches.Patch(facecolor="white", edgecolor="black",
-                           hatch="///", label=f"$n_s < {n_total}$")
+                           hatch="///", label=f"$n_s < {max_ns}$ (excluded)")
         )
     ax.legend(handles=legend_handles, loc="upper center",
               bbox_to_anchor=(0.5, -0.12), ncol=len(legend_handles),
@@ -300,8 +334,9 @@ def save_grouped_heatmap(
     # Y axis: use group IDs (G1, G2...) not parameter values
     ax.set_yticks(range(len(rank_group_ids)))
     ax.set_yticklabels(rank_group_ids, fontsize=9)
+    param_header  = group_params_columns[0][1]
     ax.set_xlabel("Ranking group (scene + method)", fontsize=10)
-    ax.set_ylabel("Parameter group", fontsize=10)
+    ax.set_ylabel(f"Parameter group ({param_header})", fontsize=10)
     ax.set_title(title or f"{prefix} -- totalrank heatmap", fontsize=11)
 
     cbar = plt.colorbar(im, ax=ax, label="totalrank (lower = better)", shrink=0.8)
@@ -321,21 +356,26 @@ def save_grouped_heatmap(
 
 def save_all_figures(
     experiments, ranked_df, output_dir, prefix,
-    scene_name="", groups_cfg=None, grouped_df=None, group_params_columns=None,
+    scene_name="", groups_cfg=None, grouped_df=None,
+    group_params_columns=None, experiments_cfg=None,
 ):
-    figures_dir  = output_dir / "figures"
-    internal_dir = figures_dir / "internal"
+    """
+    Generate all figures for a section.
+
+    figures/comparison_grid/   one grid per group_id (legend in 6th panel)
+    figures/                   grouped_bar + grouped_heatmap
+    """
+    figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    internal_dir.mkdir(parents=True, exist_ok=True)
 
-    if len(experiments) >= 2:
-        _save(_build_comparison_grid(experiments, scene_name),
-              internal_dir / f"{prefix}_comparison_grid.png")
-    _save(_build_time_comparison(experiments, prefix),
-          internal_dir / f"{prefix}_time_comparison.png")
-    _save(_build_ranking_bar(ranked_df, prefix),
-          internal_dir / f"{prefix}_ranking.png")
+    # Per-group comparison grids
+    if experiments_cfg:
+        save_comparison_grids(
+            experiments, ranked_df, experiments_cfg,
+            output_dir, prefix, scene_name,
+        )
 
+    # Paper figures
     if groups_cfg is not None and group_params_columns:
         save_grouped_bar(ranked_df, grouped_df, groups_cfg, group_params_columns,
                          output_dir, prefix, scene_name)

@@ -79,12 +79,11 @@ def compute_ranks(
     summary: pd.DataFrame,
     pct_threshold: float = None,
     totalrank_formula=None,
-    penalty_multiplier: float = 2.0,
 ) -> pd.DataFrame:
     """
     Compute ranks WITHIN each group_id separately.
     Invalid experiments (below threshold) are marked with is_valid=False
-    and receive a penalty totalrank, but are kept in the DataFrame.
+    and NaN in all rank columns.
     """
     results = []
 
@@ -99,9 +98,8 @@ def compute_ranks(
                 rank_cols = ["drank", "erank", "retrrank", "qrank",
                              "timerank", "frank", "totalrank"]
                 for col in rank_cols:
-                    group_df[col] = 0.0
-                group_df["totalrank"] = penalty_multiplier * 100.0
-                group_df["is_valid"]  = False
+                    group_df[col] = float("nan")
+                group_df["is_valid"] = False
                 results.append(group_df)
                 continue
         else:
@@ -128,16 +126,13 @@ def compute_ranks(
 
         valid_df["is_valid"] = True
 
-        # ── Penalize invalid within this group ────────────────────────────────
+        # ── Invalid: all rank columns → NaN ──────────────────────────────────
         rank_cols = ["drank", "erank", "retrrank", "qrank",
                      "timerank", "frank", "totalrank"]
         if not invalid_df.empty:
-            totalrank_max = valid_df["totalrank"].max()
-            penalty       = penalty_multiplier * totalrank_max
             for col in rank_cols:
-                invalid_df[col] = 0.0
-            invalid_df["totalrank"] = penalty
-            invalid_df["is_valid"]  = False
+                invalid_df[col] = float("nan")
+            invalid_df["is_valid"] = False
 
         results.append(pd.concat([valid_df, invalid_df]))
 
@@ -148,7 +143,6 @@ def rank_experiments(
     experiments: dict,
     pct_threshold: float = None,
     totalrank_formula=None,
-    penalty_multiplier: float = 2.0,
     experiments_cfg: dict = None,
 ) -> pd.DataFrame:
     """One-call pipeline: experiments dict -> ranked summary DataFrame."""
@@ -156,7 +150,6 @@ def rank_experiments(
         extract_summary(experiments, experiments_cfg=experiments_cfg),
         pct_threshold=pct_threshold,
         totalrank_formula=totalrank_formula,
-        penalty_multiplier=penalty_multiplier,
     )
 
 
