@@ -5,6 +5,18 @@ group_id  : who competes against whom for ranking
             (same scene + same optimization method)
 rank_group: how results are aggregated in the grouped table
             (same parameter value, labeled G1-G7)
+METRICS controls which metrics appear in results tables, rank tables,
+and comparison grid figures. Valid keys:
+
+  "distance"   →  results: acc_dist_m      rank: drank
+  "energy"     →  results: acc_energy      rank: erank
+  "retrieved"  →  results: pct_retrieved   rank: retrrank   (always ranked)
+  "quality"    →  results: mean_quality    rank: qrank
+  "time"       →  results: total_time_s    rank: timerank
+  "delta_f"    → summary col: acc_delta_f  rank col: none
+
+"retrieved" is always included in ranking even if omitted here (pct_threshold).
+"totalrank" always appears in the ranked table.
 """
 
 # ── Section identity ──────────────────────────────────────────────────────────
@@ -12,6 +24,9 @@ SECTION_META = {
     "prefix":         "motion_weights",
     "caption_prefix": "Motion Factor Weights",
 }
+
+# ── Metrics to include ────────────────────────────────────────────────────────
+METRICS = ["distance", "energy", "retrieved", "quality", "time"]
 
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {

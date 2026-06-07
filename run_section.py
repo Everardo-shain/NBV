@@ -33,7 +33,7 @@ from ranking import rank_experiments, extract_summary, rank_groups
 from tables  import save_tables
 from figures import save_all_figures
 
-SECTIONS = ["area", "motion_equations", "motion_weights", "quality", "final_validation"]
+SECTIONS = ["area", "motion_equations", "motion_weights", "quality", "final_validation", "k_sensitivity"]
 
 
 # ── Config loader ─────────────────────────────────────────────────────────────
@@ -111,6 +111,7 @@ def run_section(section: str, verbose: bool = True) -> None:
         pct_threshold     = cfg.PCT_THRESHOLD,
         totalrank_formula = cfg.TOTALRANK_FORMULA,
         experiments_cfg   = cfg.EXPERIMENTS,
+        metrics           = cfg.METRICS,
     )
     print(f"  Done.")
 
@@ -124,12 +125,19 @@ def run_section(section: str, verbose: bool = True) -> None:
         if exp_cfg["id"] in loaded_ids
     }
 
-    full_summary = extract_summary(experiments, experiments_cfg=cfg.EXPERIMENTS)
+    full_summary = extract_summary(experiments, experiments_cfg=cfg.EXPERIMENTS, metrics= cfg.METRICS)
 
     groups_cfg     = getattr(cfg, "GROUPS", None)
     grouped_ranked = None
     if groups_cfg and not full_summary.empty:
-        grouped_ranked = rank_groups(ranked, groups_cfg)
+        grouped_ranked = rank_groups(ranked, groups_cfg, metrics= cfg.METRICS)
+
+    k_stability_cfg = None
+    if hasattr(cfg, "K_STABILITY_THRESHOLD") and hasattr(cfg, "K_VALUES_ORDER"):
+        k_stability_cfg = {
+            "k_values_order": cfg.K_VALUES_ORDER,
+            "threshold":      cfg.K_STABILITY_THRESHOLD,
+        }
 
     save_tables(
         ranked_df            = ranked,
@@ -144,6 +152,8 @@ def run_section(section: str, verbose: bool = True) -> None:
         group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", None),
         params_note          = getattr(cfg, "PARAMS_NOTE", None),
         include_method       = False,
+        metrics              = cfg.METRICS,
+        k_stability_cfg      = k_stability_cfg,
     )
 
     # ── 5. Excel export (Google Drive) ───────────────────────────────────────
@@ -218,6 +228,8 @@ def run_section(section: str, verbose: bool = True) -> None:
         grouped_df           = grouped_ranked,
         group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", None),
         experiments_cfg      = loaded_exp_cfg,
+        metrics              = cfg.METRICS,
+        k_stability_cfg      = k_stability_cfg,
     )
 
     print(f"\n  Done. All outputs in {out_dir}/")
