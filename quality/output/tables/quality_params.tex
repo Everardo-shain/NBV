@@ -2,57 +2,53 @@
 \centering
 \caption{Quality factor Experiment Variable Parameters.}
 \label{tab:quality_params}
-\begin{tabular}{@{}llll@{}}
+\begin{tabular}{@{}lllllllll@{}}
 \hline
-    ID & Environment & Local Opt. Method & $f$ \\
+    \textbf{ID} & \textbf{Environ.} & \textbf{Method} & \textbf{$y_{\text{A}}$} & \textbf{$w_{\text{A}}$} & \textbf{$y_{\text{M}}$} & \textbf{$w_{\text{M}}$} & \textbf{$y_{\text{Q}}$} & \textbf{$w_{\text{Q}}$} \\
 \hline
-    4.1.01 & Study Room & (1+1)-ES & $f_{\text{area}} \cdot f_{\text{motion}}$ \\
-    4.1.02 & Study Room & (1+1)-ES & $f_{\text{area}} \cdot f_{\text{motion}}$ \cdot f_{\text{quality}}$ \\
-    4.1.03 & Study Room & (1+1)-ES & $f_{\text{area}}(0.7f_{\text{motion}} + 0.3f_{\text{quality}})$ \\
-    4.1.04 & Study Room & (1+1)-ES & $f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$ \\
-    4.1.05 & Study Room & (1+1)-ES & $f_{\text{area}}(0.3f_{\text{motion}} + 0.7f_{\text{quality}})$ \\
-    4.1.06 & Study Room & (1+1)-ES & $f_{\text{motion}}(0.7f_{\text{area}} + 0.3f_{\text{quality}})$ \\
-    4.1.07 & Study Room & (1+1)-ES & $f_{\text{motion}}(0.5f_{\text{area}} + 0.5f_{\text{quality}})$ \\
-    4.1.08 & Study Room & (1+1)-ES & $f_{\text{motion}}(0.3f_{\text{area}} + 0.7f_{\text{quality}})$ \\
-    4.1.09 & Study Room & (1+1)-ES & $f_{\text{quality}}(0.7f_{\text{area}} + 0.3f_{\text{motion}})$ \\
-    4.1.10 & Study Room & (1+1)-ES & $f_{\text{quality}}(0.5f_{\text{area}} + 0.5f_{\text{motion}})$ \\
-    4.1.11 & Study Room & (1+1)-ES & $f_{\text{quality}}(0.3f_{\text{area}} + 0.7f_{\text{motion}})$ \\
+    4.1.01 & Study Room & ES & 1 & 0 & 0 & 1 & 0 & 0 \\
+    4.1.02 & Study Room & ES & 1 & 0 & 0 & 0.7 & 0 & 0.3 \\
+    4.1.03 & Study Room & ES & 1 & 0 & 0 & 0.5 & 0 & 0.5 \\
+    4.1.04 & Study Room & ES & 1 & 0 & 0 & 0.3 & 0 & 0.7 \\
+    4.1.05 & Study Room & ES & 0 & 0.7 & 1 & 0 & 0 & 0.3 \\
+    4.1.06 & Study Room & ES & 0 & 0.5 & 1 & 0 & 0 & 0.5 \\
+    4.1.07 & Study Room & ES & 0 & 0.3 & 1 & 0 & 0 & 0.7 \\
+    4.1.08 & Study Room & ES & 0 & 0.7 & 0 & 0.3 & 1 & 0 \\
+    4.1.09 & Study Room & ES & 0 & 0.5 & 0 & 0.5 & 1 & 0 \\
+    4.1.10 & Study Room & ES & 0 & 0.3 & 0 & 0.7 & 1 & 0 \\
     \noalign{\smallskip}
-    4.2.01 & Study Room & Simulated Annealing & $f_{\text{area}} \cdot f_{\text{motion}}$ \\
-    4.2.02 & Study Room & Simulated Annealing & $f_{\text{area}} \cdot f_{\text{motion}}$ \cdot f_{\text{quality}}$ \\
-    4.2.03 & Study Room & Simulated Annealing & $f_{\text{area}}(0.7f_{\text{motion}} + 0.3f_{\text{quality}})$ \\
-    4.2.04 & Study Room & Simulated Annealing & $f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$ \\
-    4.2.05 & Study Room & Simulated Annealing & $f_{\text{area}}(0.3f_{\text{motion}} + 0.7f_{\text{quality}})$ \\
-    4.2.06 & Study Room & Simulated Annealing & $f_{\text{motion}}(0.7f_{\text{area}} + 0.3f_{\text{quality}})$ \\
-    4.2.07 & Study Room & Simulated Annealing & $f_{\text{motion}}(0.5f_{\text{area}} + 0.5f_{\text{quality}})$ \\
-    4.2.08 & Study Room & Simulated Annealing & $f_{\text{motion}}(0.3f_{\text{area}} + 0.7f_{\text{quality}})$ \\
-    4.2.09 & Study Room & Simulated Annealing & $f_{\text{quality}}(0.7f_{\text{area}} + 0.3f_{\text{motion}})$ \\
-    4.2.10 & Study Room & Simulated Annealing & $f_{\text{quality}}(0.5f_{\text{area}} + 0.5f_{\text{motion}})$ \\
-    4.2.11 & Study Room & Simulated Annealing & $f_{\text{quality}}(0.3f_{\text{area}} + 0.7f_{\text{motion}})$ \\
+    4.2.01 & Study Room & SA & 1 & 0 & 0 & 1 & 0 & 0 \\
+    4.2.02 & Study Room & SA & 1 & 0 & 0 & 0.7 & 0 & 0.3 \\
+    4.2.03 & Study Room & SA & 1 & 0 & 0 & 0.5 & 0 & 0.5 \\
+    4.2.04 & Study Room & SA & 1 & 0 & 0 & 0.3 & 0 & 0.7 \\
+    4.2.05 & Study Room & SA & 0 & 0.7 & 1 & 0 & 0 & 0.3 \\
+    4.2.06 & Study Room & SA & 0 & 0.5 & 1 & 0 & 0 & 0.5 \\
+    4.2.07 & Study Room & SA & 0 & 0.3 & 1 & 0 & 0 & 0.7 \\
+    4.2.08 & Study Room & SA & 0 & 0.7 & 0 & 0.3 & 1 & 0 \\
+    4.2.09 & Study Room & SA & 0 & 0.5 & 0 & 0.5 & 1 & 0 \\
+    4.2.10 & Study Room & SA & 0 & 0.3 & 0 & 0.7 & 1 & 0 \\
     \noalign{\smallskip}
-    4.3.01 & Laboratory & (1+1)-ES & $f_{\text{area}} \cdot f_{\text{motion}}$ \\
-    4.3.02 & Laboratory & (1+1)-ES & $f_{\text{area}} \cdot f_{\text{motion}}$ \cdot f_{\text{quality}}$ \\
-    4.3.03 & Laboratory & (1+1)-ES & $f_{\text{area}}(0.7f_{\text{motion}} + 0.3f_{\text{quality}})$ \\
-    4.3.04 & Laboratory & (1+1)-ES & $f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$ \\
-    4.3.05 & Laboratory & (1+1)-ES & $f_{\text{area}}(0.3f_{\text{motion}} + 0.7f_{\text{quality}})$ \\
-    4.3.06 & Laboratory & (1+1)-ES & $f_{\text{motion}}(0.7f_{\text{area}} + 0.3f_{\text{quality}})$ \\
-    4.3.07 & Laboratory & (1+1)-ES & $f_{\text{motion}}(0.5f_{\text{area}} + 0.5f_{\text{quality}})$ \\
-    4.3.08 & Laboratory & (1+1)-ES & $f_{\text{motion}}(0.3f_{\text{area}} + 0.7f_{\text{quality}})$ \\
-    4.3.09 & Laboratory & (1+1)-ES & $f_{\text{quality}}(0.7f_{\text{area}} + 0.3f_{\text{motion}})$ \\
-    4.3.10 & Laboratory & (1+1)-ES & $f_{\text{quality}}(0.5f_{\text{area}} + 0.5f_{\text{motion}})$ \\
-    4.3.11 & Laboratory & (1+1)-ES & $f_{\text{quality}}(0.3f_{\text{area}} + 0.7f_{\text{motion}})$ \\
+    4.3.01 & Laboratory & ES & 1 & 0 & 0 & 1 & 0 & 0 \\
+    4.3.02 & Laboratory & ES & 1 & 0 & 0 & 0.7 & 0 & 0.3 \\
+    4.3.03 & Laboratory & ES & 1 & 0 & 0 & 0.5 & 0 & 0.5 \\
+    4.3.04 & Laboratory & ES & 1 & 0 & 0 & 0.3 & 0 & 0.7 \\
+    4.3.05 & Laboratory & ES & 0 & 0.7 & 1 & 0 & 0 & 0.3 \\
+    4.3.06 & Laboratory & ES & 0 & 0.5 & 1 & 0 & 0 & 0.5 \\
+    4.3.07 & Laboratory & ES & 0 & 0.3 & 1 & 0 & 0 & 0.7 \\
+    4.3.08 & Laboratory & ES & 0 & 0.7 & 0 & 0.3 & 1 & 0 \\
+    4.3.09 & Laboratory & ES & 0 & 0.5 & 0 & 0.5 & 1 & 0 \\
+    4.3.10 & Laboratory & ES & 0 & 0.3 & 0 & 0.7 & 1 & 0 \\
     \noalign{\smallskip}
-    4.4.01 & Laboratory & Simulated Annealing & $f_{\text{area}} \cdot f_{\text{motion}}$ \\
-    4.4.02 & Laboratory & Simulated Annealing & $f_{\text{area}} \cdot f_{\text{motion}}$ \cdot f_{\text{quality}}$ \\
-    4.4.03 & Laboratory & Simulated Annealing & $f_{\text{area}}(0.7f_{\text{motion}} + 0.3f_{\text{quality}})$ \\
-    4.4.04 & Laboratory & Simulated Annealing & $f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$ \\
-    4.4.05 & Laboratory & Simulated Annealing & $f_{\text{area}}(0.3f_{\text{motion}} + 0.7f_{\text{quality}})$ \\
-    4.4.06 & Laboratory & Simulated Annealing & $f_{\text{motion}}(0.7f_{\text{area}} + 0.3f_{\text{quality}})$ \\
-    4.4.07 & Laboratory & Simulated Annealing & $f_{\text{motion}}(0.5f_{\text{area}} + 0.5f_{\text{quality}})$ \\
-    4.4.08 & Laboratory & Simulated Annealing & $f_{\text{motion}}(0.3f_{\text{area}} + 0.7f_{\text{quality}})$ \\
-    4.4.09 & Laboratory & Simulated Annealing & $f_{\text{quality}}(0.7f_{\text{area}} + 0.3f_{\text{motion}})$ \\
-    4.4.10 & Laboratory & Simulated Annealing & $f_{\text{quality}}(0.5f_{\text{area}} + 0.5f_{\text{motion}})$ \\
-    4.4.11 & Laboratory & Simulated Annealing & $f_{\text{quality}}(0.3f_{\text{area}} + 0.7f_{\text{motion}})$ \\
+    4.4.01 & Laboratory & SA & 1 & 0 & 0 & 1 & 0 & 0 \\
+    4.4.02 & Laboratory & SA & 1 & 0 & 0 & 0.7 & 0 & 0.3 \\
+    4.4.03 & Laboratory & SA & 1 & 0 & 0 & 0.5 & 0 & 0.5 \\
+    4.4.04 & Laboratory & SA & 1 & 0 & 0 & 0.3 & 0 & 0.7 \\
+    4.4.05 & Laboratory & SA & 0 & 0.7 & 1 & 0 & 0 & 0.3 \\
+    4.4.06 & Laboratory & SA & 0 & 0.5 & 1 & 0 & 0 & 0.5 \\
+    4.4.07 & Laboratory & SA & 0 & 0.3 & 1 & 0 & 0 & 0.7 \\
+    4.4.08 & Laboratory & SA & 0 & 0.7 & 0 & 0.3 & 1 & 0 \\
+    4.4.09 & Laboratory & SA & 0 & 0.5 & 0 & 0.5 & 1 & 0 \\
+    4.4.10 & Laboratory & SA & 0 & 0.3 & 0 & 0.7 & 1 & 0 \\
 \hline
 \end{tabular}
 \end{table}

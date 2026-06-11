@@ -105,7 +105,8 @@ def _active_grid_metrics(metrics):
 # ── Comparison grid (one per group_id) ───────────────────────────────────────
 
 def _build_comparison_grid_for_group(
-    experiments, group_id, experiments_cfg, scene_name="", metrics=None,
+    experiments, group_id, experiments_cfg,
+    scene_name="", metrics=None, group_params_columns=None,
 ):
     if metrics is None:
         metrics = list(_METRIC_CFG.keys())
@@ -148,12 +149,28 @@ def _build_comparison_grid_for_group(
         plt.Line2D([0], [0], label=label, **_style(i))
         for i, label in enumerate(sub_experiments.keys())
     ]
+    if experiments_cfg:
+        sample_ecfg = next(
+            (ecfg for ecfg in experiments_cfg.values()
+             if ecfg.get("group_id") == group_id),
+            {}
+        )
+        param_keys   = [k for k, _ in (metrics or [])] if False else []
+    # build legend title from rank_group labels of sub_experiments
+    # use the rank_group keys directly as they already contain param info
+    params_title = "Parameter group"
+
+    if group_params_columns:
+        params_str   = ", ".join(h for _, h in group_params_columns)
+        legend_title = f"Parameter group ({params_str})"
+    else:
+        legend_title = "Parameter group"
+
     axes[leg_idx].legend(
         handles=handles, loc="center",
-        title="Parameter group", title_fontsize=9,
+        title=legend_title, title_fontsize=9,
         fontsize=8, framealpha=0.9, borderaxespad=0, handlelength=2.5,
     )
-
     # Hide any remaining empty cells
     for idx in range(leg_idx + 1, n_cells):
         axes[idx].set_axis_off()
@@ -168,6 +185,7 @@ def _build_comparison_grid_for_group(
 def save_comparison_grids(
     experiments, ranked_df, experiments_cfg,
     output_dir, prefix, scene_name="", metrics=None,
+    group_params_columns=None,
 ):
     if not experiments_cfg:
         return
@@ -183,7 +201,8 @@ def save_comparison_grids(
 
     for gid in group_ids:
         fig = _build_comparison_grid_for_group(
-            experiments, gid, experiments_cfg, scene_name, metrics=metrics,
+            experiments, gid, experiments_cfg, scene_name,
+            metrics=metrics, group_params_columns=group_params_columns,
         )
         if fig is not None:
             safe_gid = gid.replace(".", "_")
@@ -273,8 +292,8 @@ def save_grouped_bar(
 
     # Build axis label from GROUP_PARAMS_COLUMNS header, stripping LaTeX for matplotlib
     # Use param header directly as matplotlib mathtext (keep $ signs)
-    param_header = group_params_columns[0][1]
-    ax.set_xlabel(f"Parameter group ({param_header})")
+    params_str = ", ".join(h for _, h in group_params_columns)
+    ax.set_xlabel(f"Parameter group ({params_str})")
     ax.set_ylabel("Mean total rank (lower = better)")
     ax.set_title(title or f"{prefix} -- grouped ranking")
     ax.grid(axis="y", linestyle="--", alpha=0.4)
@@ -362,9 +381,9 @@ def save_grouped_heatmap(
     # Y axis: use group IDs (G1, G2...) not parameter values
     ax.set_yticks(range(len(rank_group_ids)))
     ax.set_yticklabels(rank_group_ids, fontsize=9)
-    param_header  = group_params_columns[0][1]
+    params_str = ", ".join(h for _, h in group_params_columns)
     ax.set_xlabel("Ranking group (scene + method)", fontsize=10)
-    ax.set_ylabel(f"Parameter group ({param_header})", fontsize=10)
+    ax.set_ylabel(f"Parameter group ({params_str})", fontsize=10)
     ax.set_title(title or f"{prefix} -- totalrank heatmap", fontsize=11)
 
     cbar = plt.colorbar(im, ax=ax, label="totalrank (lower = better)", shrink=0.8)
@@ -379,119 +398,111 @@ def save_grouped_heatmap(
     fig.tight_layout()
     _save(fig, output_dir / "figures" / f"{prefix}_grouped_heatmap.png")
 
-# ── K stability figure (k_sensitivity section only) ───────────────────────────
+# ── Delta f comparison figure (robust_comparison section only) ────────────────
 
-def save_k_stability_figure(
-    grouped_df, k_values_order, threshold,
+def save_delta_f_comparison_figure(
+    ranked_df, experiments_cfg, groups_cfg,
+    baseline_rg, delta_f_min_improvement,
     output_dir, prefix,
 ):
-    """
-    Line plot of mean totalrank vs k with a horizontal dashed line
-    marking the stability threshold. Used only in the k_sensitivity section.
-
-    grouped_df rows must be ordered to match k_values_order.
-    """
-    if grouped_df is None or grouped_df.empty:
+    if "acc_delta_f" not in ranked_df.columns:
         return
 
-    # Extract totalrank values in k_values_order
-    totalranks = []
-    for i, k_val in enumerate(k_values_order):
-        if i >= len(grouped_df):
-            totalranks.append(float("nan"))
-            continue
-        tr = grouped_df.iloc[i]["totalrank"]
-        totalranks.append(float(tr) if not pd.isna(tr) else float("nan"))
+    rank_col = "rank_group" if "rank_group" in ranked_df.columns else "group_id"
 
-    # Compute percentage changes between consecutive k values
-    pct_changes = []
-    for i in range(len(totalranks) - 1):
-        curr, nxt = totalranks[i], totalranks[i + 1]
-        if np.isnan(curr) or np.isnan(nxt) or curr == 0:
-            pct_changes.append(float("nan"))
+    # One bar per lambda, averaged across all group_ids
+    lambda_labels = []
+    lambda_means  = []
+    lambda_valid  = []   # True if n_s=4 for this rank_group
+
+    n_total = len(set(ranked_df["group_id"].unique()))
+
+    for rg, gdata in groups_cfg.items():
+        sub      = ranked_df[ranked_df[rank_col] == rg]
+        valid    = sub[sub["is_valid"] == True] if "is_valid" in sub.columns else sub
+        mean_df  = valid["acc_delta_f"].mean() if "acc_delta_f" in valid.columns \
+                   and not valid.empty else float("nan")
+        ns       = len(valid)
+
+        lambda_labels.append(gdata.get("lambda", rg))
+        lambda_means.append(mean_df)
+        lambda_valid.append(ns == n_total)
+
+    # Baseline delta_f for improvement line
+    baseline_idx = list(groups_cfg.keys()).index(baseline_rg) \
+                   if baseline_rg in groups_cfg else 0
+    baseline_val = lambda_means[baseline_idx] \
+                   if not pd.isna(lambda_means[baseline_idx]) else None
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    x = np.arange(len(lambda_labels))
+
+    bar_colors = []
+    for i, (mean, valid) in enumerate(zip(lambda_means, lambda_valid)):
+        if i == baseline_idx:
+            bar_colors.append(COLOR_DEFAULT)
+        elif not valid:
+            bar_colors.append(COLOR_INVALID)
         else:
-            pct_changes.append(100.0 * abs(nxt - curr) / curr)
+            if baseline_val and not np.isnan(mean):
+                improvement = 100.0 * (baseline_val - mean) / abs(baseline_val)
+                bar_colors.append(
+                    COLOR_BEST if improvement >= delta_f_min_improvement
+                    else COLOR_DEFAULT
+                )
+            else:
+                bar_colors.append(COLOR_DEFAULT)
 
-    # Find first stable k
-    stable_k = None
-    for i, pct in enumerate(pct_changes):
-        if not np.isnan(pct) and pct < threshold:
-            stable_k = k_values_order[i]
-            break
-
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-
-    # ── Left panel: totalrank vs k ────────────────────────────────────────────
-    ax = axes[0]
-    ax.plot(
-        k_values_order, totalranks,
-        color=COLOR_DEFAULT, linestyle="-", marker="o",
-        linewidth=1.4, markersize=5, label="Mean totalrank",
+    bars = ax.bar(
+        x, lambda_means, color=bar_colors,
+        edgecolor="black", linewidth=0.6, width=0.6,
     )
 
-    if stable_k is not None:
-        stable_idx = k_values_order.index(stable_k)
-        ax.axvline(
-            x=stable_k, color=COLOR_BEST,
-            linestyle="--", linewidth=1.2,
-            label=f"Selected $k={stable_k}$",
-        )
-        ax.plot(
-            stable_k, totalranks[stable_idx],
-            marker="*", color=COLOR_BEST,
-            markersize=10, zorder=5,
-        )
-
-    ax.set_xlabel("$k$ (neighborhood sample size)")
-    ax.set_ylabel("Mean total rank (lower = better)")
-    ax.set_xticks(k_values_order)
-    ax.grid(True, linestyle="--", alpha=0.35, linewidth=0.6)
-    ax.legend(fontsize=8, framealpha=0.9)
-    ax.set_title("(a)", fontsize=8, pad=4, loc="center")
-
-    # ── Right panel: percentage change between consecutive k ──────────────────
-    ax = axes[1]
-    x_mid = [
-        f"$k={k_values_order[i]}\\to{k_values_order[i+1]}$"
-        for i in range(len(k_values_order) - 1)
-    ]
-    x_pos = range(len(x_mid))
-
-    bar_colors = [
-        COLOR_BEST if (not np.isnan(p) and p < threshold) else COLOR_DEFAULT
-        for p in pct_changes
-    ]
-    ax.bar(
-        x_pos, pct_changes,
-        color=bar_colors, edgecolor="black",
-        linewidth=0.6, width=0.5,
-    )
-    ax.axhline(
-        y=threshold, color=COLOR_BEST,
-        linestyle="--", linewidth=1.2,
-        label=f"Stability threshold ({threshold:.0f}\\%)",
-    )
-
-    ax.set_xticks(x_pos)
-    ax.set_xticklabels(x_mid, fontsize=8)
-    ax.set_xlabel("Transition")
-    ax.set_ylabel(r"$\Delta$ totalrank (\%)")
-    ax.grid(axis="y", linestyle="--", alpha=0.35, linewidth=0.6)
-    ax.legend(fontsize=8, framealpha=0.9)
-    ax.set_title("(b)", fontsize=8, pad=4, loc="center")
-
-    # Annotate bars with values
-    max_pct = max((p for p in pct_changes if not np.isnan(p)), default=threshold)
-    for i, pct in enumerate(pct_changes):
-        if not np.isnan(pct):
+    # Annotate bars
+    max_val = max((v for v in lambda_means if not np.isnan(v)), default=1.0)
+    for i, (bar, valid) in enumerate(zip(bars, lambda_valid)):
+        h = bar.get_height()
+        if not np.isnan(h):
+            suffix = "" if valid else " (N/A)"
             ax.text(
-                i, pct + max_pct * 0.02,
-                f"{pct:.2f}\\%",
+                bar.get_x() + bar.get_width() / 2,
+                h + max_val * 0.01,
+                f"{h:.3f}{suffix}",
                 ha="center", va="bottom", fontsize=7,
             )
 
+    # Threshold line: baseline * (1 - improvement/100)
+    if baseline_val is not None:
+        threshold_val = baseline_val * (1.0 - delta_f_min_improvement / 100.0)
+        ax.axhline(
+            y=threshold_val, color=COLOR_BEST,
+            linestyle="--", linewidth=1.2,
+            label=f"Minimum improvement threshold ({delta_f_min_improvement:.0f}\\%)",
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(lambda_labels, fontsize=8)
+    ax.set_xlabel(r"$\lambda$")
+    ax.set_ylabel(r"Mean accumulated $\Delta f$ (lower = more robust)")
+    ax.set_title(
+        r"Neighborhood degradation across $\lambda$ values",
+        fontsize=9,
+    )
+    ax.grid(axis="y", linestyle="--", alpha=0.35, linewidth=0.6)
+
+    legend_handles = [
+        mpatches.Patch(color=COLOR_DEFAULT, label="Baseline / below threshold"),
+        mpatches.Patch(color=COLOR_BEST,    label="Above threshold (selected candidate)"),
+        mpatches.Patch(color=COLOR_INVALID, label=r"$n_s < 4$ (excluded)"),
+    ]
+    ax.legend(
+        handles=legend_handles, loc="upper center",
+        bbox_to_anchor=(0.5, -0.14), ncol=3,
+        framealpha=0.9, fontsize=8,
+    )
+
     fig.tight_layout()
-    _save(fig, output_dir / "figures" / f"{prefix}_k_stability.png")
+    _save(fig, output_dir / "figures" / f"{prefix}_delta_f_comparison.png")
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
@@ -500,7 +511,7 @@ def save_all_figures(
     scene_name="", groups_cfg=None, grouped_df=None,
     group_params_columns=None, experiments_cfg=None,
     metrics=None,
-    k_stability_cfg=None,
+    robust_comparison_cfg=None, 
 ):
     figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
@@ -509,6 +520,7 @@ def save_all_figures(
         save_comparison_grids(
             experiments, ranked_df, experiments_cfg,
             output_dir, prefix, scene_name, metrics=metrics,
+            group_params_columns=group_params_columns,
         )
 
     if groups_cfg is not None and group_params_columns:
@@ -517,12 +529,15 @@ def save_all_figures(
         save_grouped_heatmap(ranked_df, groups_cfg, group_params_columns,
                              output_dir, prefix, scene_name)
 
-    # ── K stability figure (k_sensitivity section only) ───────────────────────
-    if k_stability_cfg is not None and grouped_df is not None:
-        save_k_stability_figure(
-            grouped_df      = grouped_df,
-            k_values_order  = k_stability_cfg["k_values_order"],
-            threshold       = k_stability_cfg["threshold"],
-            output_dir      = output_dir,
-            prefix          = prefix,
+
+    # ── Delta f comparison (robust_comparison section only) ───────────────────
+    if robust_comparison_cfg is not None and experiments_cfg is not None:
+        save_delta_f_comparison_figure(
+            ranked_df               = ranked_df,
+            experiments_cfg         = experiments_cfg,
+            groups_cfg              = groups_cfg,
+            baseline_rg             = robust_comparison_cfg["baseline_rg"],
+            delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
+            output_dir              = output_dir,
+            prefix                  = prefix,
         )

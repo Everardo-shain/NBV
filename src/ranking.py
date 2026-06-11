@@ -118,6 +118,8 @@ def extract_summary(
             elif mkey == "delta_f":
                 if "cum_delta_f" in df.columns:
                     row[summary_col] = float(last["cum_delta_f"])
+                else:
+                    row[summary_col] = 0.0
 
         rows.append(row)
 

@@ -1,4 +1,6 @@
 from pathlib import Path
+from sys import prefix
+from wsgiref import headers
 import pandas as pd
 
 
@@ -10,12 +12,12 @@ _METRIC_REGISTRY = {
                   "drank",         r"$d_{\text{rank}}$",        False, "r"),
     "energy":    ("acc_energy",    r"\thead{Acc.\\ energy}",    False,
                   "erank",         r"$e_{\text{rank}}$",        False, "r"),
-    "retrieved": ("pct_retrieved", r"\thead{\%ret.}",           True,
-                  "retrrank",      r"$retr_{\text{rank}}$",     False, "r"),
+    "retrieved": ("pct_retrieved", r"\thead{Retr.\\ (m)}",           True,
+                  "retrrank",      r"$r_{\text{rank}}$",     False, "r"),
     "quality":   ("mean_quality",  r"\thead{Mean\\ quality}",   True,
                   "qrank",         r"$q_{\text{rank}}$",        False, "r"),
     "time":      ("total_time_s",  r"\thead{Time\\ (s)}",       False,
-                  "timerank",      r"$time_{\text{rank}}$",     False, "r"),
+                  "timerank",      r"$t_{\text{rank}}$",     False, "r"),
     "delta_f":   ("acc_delta_f",   r"\thead{Acc.\\ $\Delta f$}",False,
                   None,            None,                        False, "r"),
 }
@@ -97,7 +99,7 @@ def _to_latex(fmt_df, cols, col_aligns, headers,
     hdr_map.update(headers)
 
     spec       = _col_spec(display, col_aligns)
-    header_row = " & ".join(hdr_map.get(c, c) for c in display) + r" \\"
+    header_row = " & ".join(_bold(hdr_map.get(c, c)) for c in display) + r" \\"
     table_env  = "table*" if two_col else "table"
 
     rows = []
@@ -235,7 +237,7 @@ def params_table(experiments_cfg, params_columns, caption, label, note=None):
     col_keys    = ["id"] + [k for k, _ in params_columns]
     col_headers = {"id": "ID", **{k: h for k, h in params_columns}}
     spec        = "@{}" + "l" * len(col_keys) + "@{}"
-    header_row  = " & ".join(col_headers[k] for k in col_keys) + r" \\"
+    header_row  = " & ".join(_bold(col_headers[k]) for k in col_keys) + r" \\"
 
     rows, prev_group = [], None
     for cfg in experiments_cfg.values():
@@ -278,12 +280,12 @@ def grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
     param_col_hdrs = {
         "id":            "ID",
         "success_count": rf"$n_s/{n_total}$",
-        "totalrank":     r"$\overline{total_{\text{rank}}}$",
+        "totalrank":     r"$group_{\text{rank}}$",
         **{k: h for k, h in group_params_columns},
     }
     param_aligns = (["l"] * (1 + len(group_params_columns)) + ["c", "r"])
     spec         = "@{}" + "".join(param_aligns) + "@{}"
-    header_row   = " & ".join(param_col_hdrs[k] for k in param_col_keys) + r" \\"
+    header_row   = " & ".join(_bold(param_col_hdrs[k]) for k in param_col_keys) + r" \\"
 
     if not grouped_df.empty and "success_count" in grouped_df.columns:
         sorted_w   = grouped_df.sort_values(["success_count", "totalrank"],
@@ -347,56 +349,109 @@ def grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
         r"\end{table}"
     )
 
-# ── K stability table ─────────────────────────────────────────────────────────
 
-def k_stability_table(grouped_df, k_values_order, threshold,
-                      caption, label):
+# ── Robust comparison grouped table ──────────────────────────────────────────
+
+def robust_comparison_table(
+    ranked_df, grouped_df, experiments_cfg,
+    baseline_rg, delta_f_min_improvement,
+    caption, label,
+):
     """
-    Generates a LaTeX table showing the percentage change in totalrank
-    between consecutive k values. Used only in the k_sensitivity section.
-
-    grouped_df must have columns: experiment_id (matching rank_group keys),
-    totalrank.
+    Side-by-side comparison table for all lambda values.
+    Columns: lambda | n_s/4 | totalrank | acc_delta_f | delta_f improvement % | Selected
     """
-    rows = []
-    for i in range(len(k_values_order) - 1):
-        k_curr = k_values_order[i]
-        k_next = k_values_order[i + 1]
+    # Get baseline delta_f from grouped_df
+    baseline_row = grouped_df[grouped_df["experiment_id"] == baseline_rg]
+    baseline_df  = float(baseline_row["acc_delta_f"].values[0]) \
+                   if not baseline_row.empty and "acc_delta_f" in baseline_row.columns \
+                   else float("nan")
+    baseline_tr  = float(baseline_row["totalrank"].values[0]) \
+                   if not baseline_row.empty else float("nan")
 
-        # match by k value in grouped_df via experiment_id
-        # grouped_df experiment_id values are like "6.Y.01", "6.Y.02"...
-        # position in k_values_order corresponds to position in GROUPS
-        idx_curr = i
-        idx_next = i + 1
+    n_total = 4
 
-        if idx_curr >= len(grouped_df) or idx_next >= len(grouped_df):
-            continue
+    rows     = []
+    selected = None
 
-        tr_curr = grouped_df.iloc[idx_curr]["totalrank"]
-        tr_next = grouped_df.iloc[idx_next]["totalrank"]
+    for _, grp_row in grouped_df.iterrows():
+        rg       = grp_row["experiment_id"]
+        ns       = int(grp_row["success_count"]) \
+                   if "success_count" in grp_row else n_total
+        tr       = float(grp_row["totalrank"]) \
+                   if not pd.isna(grp_row["totalrank"]) else float("nan")
+        df_val   = float(grp_row["acc_delta_f"]) \
+                   if "acc_delta_f" in grp_row and not pd.isna(grp_row["acc_delta_f"]) \
+                   else float("nan")
 
-        if pd.isna(tr_curr) or pd.isna(tr_next) or tr_curr == 0:
-            pct_change = float("nan")
-            stable     = "--"
+        # lambda label from GROUPS
+        lam_label = grp_row.get("lambda", rg)
+
+        # compute delta_f improvement vs baseline
+        if rg == baseline_rg or pd.isna(baseline_df) or pd.isna(df_val):
+            improvement = float("nan")
+        elif baseline_df == 0:
+            improvement = float("nan")
         else:
-            pct_change = 100.0 * abs(tr_next - tr_curr) / tr_curr
-            stable     = r"\textbf{yes}" if pct_change < threshold else "no"
+            improvement = 100.0 * (baseline_df - df_val) / abs(baseline_df)
 
-        transition = f"$k={k_curr} \\rightarrow k={k_next}$"
-        tr_curr_fmt = _fmt(tr_curr, 3) if not pd.isna(tr_curr) else "--"
-        tr_next_fmt = _fmt(tr_next, 3) if not pd.isna(tr_next) else "--"
-        pct_fmt     = _fmt(pct_change, 2) if not pd.isna(pct_change) else "--"
+        # totalrank cost vs baseline
+        if rg == baseline_rg or pd.isna(baseline_tr) or pd.isna(tr):
+            tr_cost = float("nan")
+        else:
+            tr_cost = 100.0 * (tr - baseline_tr) / abs(baseline_tr)
+
+        # selection: minimum lambda with n_s=4 AND improvement >= threshold
+        passes = (ns == n_total) and \
+                 (not pd.isna(improvement)) and \
+                 (improvement >= delta_f_min_improvement)
+
+        if passes and selected is None and rg != baseline_rg:
+            selected = rg
+
+        # format cells
+        ns_fmt   = str(ns)
+        tr_fmt   = _fmt(tr, 3)   if not pd.isna(tr)          else "--"
+        df_fmt   = _fmt(df_val, 3) if not pd.isna(df_val)    else "--"
+        imp_fmt  = (f"{improvement:.1f}\\%" if not pd.isna(improvement) else "--")
+        cost_fmt = (f"+{tr_cost:.1f}\\%" if (not pd.isna(tr_cost) and tr_cost >= 0)
+                    else (f"{tr_cost:.1f}\\%" if not pd.isna(tr_cost) else "--"))
+        sel_fmt  = r"\textbf{yes}" if rg == selected else \
+                   ("--" if rg == baseline_rg else "no")
+
+        # bold entire row if selected
+        if rg == selected:
+            ns_fmt   = _bold(ns_fmt)
+            tr_fmt   = _bold(tr_fmt)
+            df_fmt   = _bold(df_fmt)
+            imp_fmt  = _bold(imp_fmt)
+            cost_fmt = _bold(cost_fmt)
+
+        # italic if n_s < 4 and not baseline
+        if ns < n_total and rg != baseline_rg:
+            ns_fmt  = _italic(ns_fmt)
+            tr_fmt  = _italic(tr_fmt)
+            df_fmt  = _italic(df_fmt)
 
         rows.append(
-            f"    {transition} & {tr_curr_fmt} & {tr_next_fmt} & {pct_fmt} & {stable} \\\\"
+            f"    {lam_label} & {ns_fmt} & {tr_fmt} & "
+            f"{df_fmt} & {imp_fmt} & {cost_fmt} & {sel_fmt} \\\\"
         )
 
-    spec       = "@{}lrrrr@{}"
-    header_row = (r"Transition & "
-                  r"$total_{\text{rank}}(k)$ & "
-                  r"$total_{\text{rank}}(k{+}1)$ & "
-                  r"$\Delta$ totalrank (\%) & "
-                  r"Stable ($<$" + f"{threshold:.0f}" + r"\%)" + r" \\")
+    if selected is None:
+        rows.append(
+            r"    \multicolumn{7}{l}{"
+            r"\textit{No $\lambda > 0$ achieved valid results across all "
+            r"sub-experiments with sufficient $\Delta f$ improvement.}} \\"
+        )
+
+    spec = "@{}lcrrrrl@{}"
+    raw_headers = [
+        r"$\lambda$", r"$n_s/4$", r"$total_{\text{rank}}$", 
+        r"Acc. $\Delta f$", r"$\Delta f$ impr. (\%)", 
+        r"$total_{\text{rank}}$ cost (\%)", "Selected"
+    ]
+    header_row = " & ".join(_bold(h) for h in raw_headers) + r" \\"
     body = "\n".join(rows)
 
     return (
@@ -424,7 +479,7 @@ def save_tables(
     group_params_columns=None, params_columns=None,
     params_note=None, include_method=True,
     metrics=None,
-    k_stability_cfg=None,
+    robust_comparison_cfg=None, 
 ):
     if metrics is None:
         metrics = list(_METRIC_REGISTRY.keys())
@@ -464,15 +519,20 @@ def save_tables(
                                    label=f"tab:{prefix}_grouped_ranked")
         (tables_dir / f"{prefix}_grouped_ranked.tex").write_text(grp, encoding="utf-8")
 
-    # ── K stability table (k_sensitivity section only) ────────────────────────
-    if k_stability_cfg is not None and grouped_df is not None:
-        k_stab = k_stability_table(
-            grouped_df          = grouped_df,
-            k_values_order      = k_stability_cfg["k_values_order"],
-            threshold           = k_stability_cfg["threshold"],
-            caption             = f"{caption_prefix} Totalrank Stability Between Consecutive $k$ Values.",
-            label               = f"tab:{prefix}_k_stability",
+       
+    # ── Robust comparison table (robust_comparison section only) ─────────────
+    if robust_comparison_cfg is not None and grouped_df is not None:
+        rc = robust_comparison_table(
+            ranked_df            = ranked_df,
+            grouped_df           = grouped_df,
+            experiments_cfg      = experiments_cfg or {},
+            baseline_rg          = robust_comparison_cfg["baseline_rg"],
+            delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
+            caption              = f"{caption_prefix} Lambda Selection Summary.",
+            label                = f"tab:{prefix}_lambda_selection",
         )
-        (tables_dir / f"{prefix}_k_stability.tex").write_text(k_stab, encoding="utf-8")
-    
+        (tables_dir / f"{prefix}_lambda_selection.tex").write_text(
+            rc, encoding="utf-8"
+        )
+
     print(f"  Tables -> {tables_dir}/{prefix}_{{params,results,ranked,grouped_ranked}}.tex")

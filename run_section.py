@@ -33,7 +33,8 @@ from ranking import rank_experiments, extract_summary, rank_groups
 from tables  import save_tables
 from figures import save_all_figures
 
-SECTIONS = ["area", "motion_equations", "motion_weights", "quality", "final_validation", "k_sensitivity"]
+SECTIONS = ["area", "distance_energy", "motion", 
+            "quality", "final_obj_comparison", "k_sensitivity", "robust_comparison"]
 
 
 # ── Config loader ─────────────────────────────────────────────────────────────
@@ -132,13 +133,13 @@ def run_section(section: str, verbose: bool = True) -> None:
     if groups_cfg and not full_summary.empty:
         grouped_ranked = rank_groups(ranked, groups_cfg, metrics= cfg.METRICS)
 
-    k_stability_cfg = None
-    if hasattr(cfg, "K_STABILITY_THRESHOLD") and hasattr(cfg, "K_VALUES_ORDER"):
-        k_stability_cfg = {
-            "k_values_order": cfg.K_VALUES_ORDER,
-            "threshold":      cfg.K_STABILITY_THRESHOLD,
-        }
 
+    robust_comparison_cfg = None
+    if getattr(cfg, "ROBUST_COMPARISON", False):
+        robust_comparison_cfg = {
+            "baseline_rg":           cfg.ROBUST_BASELINE_RG,
+            "delta_f_min_improvement": cfg.DELTA_F_MIN_IMPROVEMENT,
+        }
     save_tables(
         ranked_df            = ranked,
         full_summary         = full_summary,
@@ -153,7 +154,7 @@ def run_section(section: str, verbose: bool = True) -> None:
         params_note          = getattr(cfg, "PARAMS_NOTE", None),
         include_method       = False,
         metrics              = cfg.METRICS,
-        k_stability_cfg      = k_stability_cfg,
+        robust_comparison_cfg = robust_comparison_cfg,       
     )
 
     # ── 5. Excel export (Google Drive) ───────────────────────────────────────
@@ -229,7 +230,7 @@ def run_section(section: str, verbose: bool = True) -> None:
         group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", None),
         experiments_cfg      = loaded_exp_cfg,
         metrics              = cfg.METRICS,
-        k_stability_cfg      = k_stability_cfg,
+        robust_comparison_cfg = robust_comparison_cfg,
     )
 
     print(f"\n  Done. All outputs in {out_dir}/")

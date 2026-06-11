@@ -110,7 +110,7 @@ identifier shown in results and ranked tables.
 ```python
 EXPERIMENTS = {
     "lab_anne_40": {"id": "1.02", "environment": "Laboratory",
-                    "method": "Simulated Annealing", "alpha": 0.40},
+                    "method": "SA", "alpha": 0.40},
     ...
 }
 ```
@@ -120,8 +120,8 @@ Defines which extra keys from `EXPERIMENTS` appear in the parameters table,
 in what order, and with what LaTeX header.
 ```python
 PARAMS_COLUMNS = [
-    ("environment", "Environment"),
-    ("method",      "Local Opt. Method"),
+    ("environment", "Environ."),
+    ("method",      "Method"),
     ("alpha",       r"$\alpha$"),
 ]
 ```
