@@ -30,37 +30,33 @@ METRICS = ["distance", "energy", "retrieved", "quality", "time"]
 
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {
-    "stu_evol_1a5m5q":  {"id": "5.1.01", "group_id": "5.1", "rank_group": "5.Y.01", "environment": "Study Room",  "method": "ES",            "f": r"$f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$"},
-    "stu_evol_original":  {"id": "5.1.02", "group_id": "5.1", "rank_group": "5.Y.02", "environment": "Study Room",  "method": "ES",            "f": r"$f_{\text{area}} \cdot f_{\text{motion}}$"},
+    "stu_evol_1a5m5q":  {"id": "5.1.01", "group_id": "5.1", "rank_group": "5.Y.01", "environment": "Study Room",  "method": "ES",            "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
+    "stu_evol_original":  {"id": "5.1.02", "group_id": "5.1", "rank_group": "5.Y.02", "environment": "Study Room",  "method": "ES",            "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
 
 
-    "stu_anne_1a5m5q":  {"id": "5.2.01", "group_id": "5.2", "rank_group": "5.Y.01", "environment": "Study Room",  "method": "SA", "f": r"$f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$"},
-    "stu_anne_original":  {"id": "5.2.02", "group_id": "5.2", "rank_group": "5.Y.02", "environment": "Study Room",  "method": "SA", "f": r"$f_{\text{area}} \cdot f_{\text{motion}}$"},
+    "stu_anne_1a5m5q":  {"id": "5.2.01", "group_id": "5.2", "rank_group": "5.Y.01", "environment": "Study Room",  "method": "SA", "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
+    "stu_anne_original":  {"id": "5.2.02", "group_id": "5.2", "rank_group": "5.Y.02", "environment": "Study Room",  "method": "SA", "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
 
 
-    "lab_evol_1a5m5q":  {"id": "5.3.01", "group_id": "5.3", "rank_group": "5.Y.01", "environment": "Laboratory",  "method": "ES",            "f": r"$f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$"},
-    "lab_evol_original":  {"id": "5.3.02", "group_id": "5.3", "rank_group": "5.Y.02", "environment": "Laboratory",  "method": "ES",            "f": r"$f_{\text{area}} \cdot f_{\text{motion}}$"},
+    "lab_evol_1a5m5q":  {"id": "5.3.01", "group_id": "5.3", "rank_group": "5.Y.01", "environment": "Laboratory",  "method": "ES",            "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
+    "lab_evol_original":  {"id": "5.3.02", "group_id": "5.3", "rank_group": "5.Y.02", "environment": "Laboratory",  "method": "ES",            "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
  
 
-    "lab_anne_1a5m5q":  {"id": "5.4.01", "group_id": "5.4", "rank_group": "5.Y.01", "environment": "Laboratory",  "method": "SA", "f": r"$f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$"},
-    "lab_anne_original":  {"id": "5.4.02", "group_id": "5.4", "rank_group": "5.Y.02", "environment": "Laboratory",  "method": "SA", "f": r"$f_{\text{area}} \cdot f_{\text{motion}}$"},
+    "lab_anne_1a5m5q":  {"id": "5.4.01", "group_id": "5.4", "rank_group": "5.Y.01", "environment": "Laboratory",  "method": "SA", "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
+    "lab_anne_original":  {"id": "5.4.02", "group_id": "5.4", "rank_group": "5.Y.02", "environment": "Laboratory",  "method": "SA", "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
 }
 
 # ── Groups ────────────────────────────────────────────────────────────────────
 GROUPS = {
-    "5.Y.01": {"f": r"$f_{\text{area}}(0.5f_{\text{motion}} + 0.5f_{\text{quality}})$"},
-    "5.Y.02": {"f": r"$f_{\text{area}} \cdot f_{\text{motion}}$"},
+    "5.Y.01": {"w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
+    "5.Y.02": {"w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
 }
 
 GROUP_PARAMS_COLUMNS = [
-    ("f",  r"$f$"),
-]
-
-# ── Parameters table columns ──────────────────────────────────────────────────
-PARAMS_COLUMNS = [
-    ("environment", "Environ."),
-    ("method",      "Method"),
-    ("f",  r"$f$"),
+    ("w_m",  r"$w_{\text{M}}$"),
+    ("sw_d",  r"$\mathit{sw}_{\text{D}}$"),
+    ("sw_e",  r"$\mathit{sw}_{\text{E}}$"),
+    ("w_q",  r"$w_{\text{Q}}$"),
 ]
 
 # ── Ranking configuration ─────────────────────────────────────────────────────

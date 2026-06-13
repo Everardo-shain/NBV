@@ -34,7 +34,7 @@ from tables  import save_tables
 from figures import save_all_figures
 
 SECTIONS = ["area", "distance_energy", "motion", 
-            "quality", "final_obj_comparison", "k_sensitivity", "robust_comparison"]
+            "quality", "final_obj_comparison", "k_sensitivity", "robust", "robust_comparison"]
 
 
 # ── Config loader ─────────────────────────────────────────────────────────────

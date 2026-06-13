@@ -120,7 +120,7 @@ Defines which extra keys from `EXPERIMENTS` appear in the parameters table,
 in what order, and with what LaTeX header.
 ```python
 PARAMS_COLUMNS = [
-    ("environment", "Environ."),
+    ("environment", "Scene"),
     ("method",      "Method"),
     ("alpha",       r"$\alpha$"),
 ]

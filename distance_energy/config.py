@@ -67,7 +67,7 @@ GROUP_PARAMS_COLUMNS = [
 
 # ── Parameters table columns ──────────────────────────────────────────────────
 PARAMS_COLUMNS = [
-    ("environment", "Environ."),
+    ("environment", "Scene"),
     ("method",      "Method"),
     ("k_d",  r"$k_{\text{d}}$"),
     ("k_e",  r"$k_{\text{e}}$")

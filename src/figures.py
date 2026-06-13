@@ -8,13 +8,9 @@ subfigure labels centered below panels in 8 pt.
 Figure outputs
 --------------
   figures/
-    {prefix}_grouped_bar.png
-    {prefix}_grouped_heatmap.png
+    {prefix}_analysis.png       (Combined Heatmap + Bar chart)
     comparison_grid/
       {prefix}_{group_id}_comparison_grid.png   one per group_id (scene+method)
-
-Which panels appear in the comparison grid is driven by the METRICS list
-from config.py.
 """
 
 import matplotlib
@@ -37,13 +33,13 @@ plt.rcParams.update({
     "font.family":          "serif",
     "font.serif":           ["Times New Roman", "DejaVu Serif"],
     "mathtext.fontset":     "stix",
-    "axes.titlesize":       8,
+    "axes.titlesize":       7.5,
     "axes.titleweight":     "normal",
-    "axes.labelsize":       9,
-    "xtick.labelsize":      8,
-    "ytick.labelsize":      8,
-    "legend.fontsize":      8,
-    "legend.title_fontsize":9,
+    "axes.labelsize":       8.0,
+    "xtick.labelsize":      7.0,
+    "ytick.labelsize":      7.0,
+    "legend.fontsize":      7.0,
+    "legend.title_fontsize":8.0,
     "figure.dpi":           150,
     "savefig.dpi":          300,
     "savefig.bbox":         "tight",
@@ -156,8 +152,7 @@ def _build_comparison_grid_for_group(
             {}
         )
         param_keys   = [k for k, _ in (metrics or [])] if False else []
-    # build legend title from rank_group labels of sub_experiments
-    # use the rank_group keys directly as they already contain param info
+
     params_title = "Parameter group"
 
     if group_params_columns:
@@ -209,134 +204,44 @@ def save_comparison_grids(
             _save(fig, grid_dir / f"{prefix}_{safe_gid}_comparison_grid.png")
 
 
-# ── Grouped bar ───────────────────────────────────────────────────────────────
+# ── Combined Grouped Analysis (Heatmap + Bar Chart) ───────────────────────────
 
-def save_grouped_bar(
+def save_combined_grouped_analysis(
     ranked_df, grouped_df, groups_cfg, group_params_columns,
-    output_dir, prefix, title="",
+    output_dir, prefix, title=""
 ):
-    if grouped_df is None or groups_cfg is None:
-        return
-
-    n_total = 4
-
-    # Use group IDs (G1, G2...) as x-axis labels
-    labels, means, stds, success_counts = [], [], [], []
-    for gid, gdata in groups_cfg.items():
-        match = grouped_df[grouped_df["experiment_id"] == gid]
-        if match.empty:
-            continue
-        rank_col = "rank_group" if "rank_group" in ranked_df.columns else "group_id"
-        sub = ranked_df[ranked_df[rank_col] == gid]["totalrank"]
-        labels.append(gid)   # G1, G2... as label
-        means.append(float(match["totalrank"].values[0]))
-        stds.append(sub.std(ddof=1) if len(sub) > 1 else 0.0)
-        success_counts.append(
-            int(match["success_count"].values[0])
-            if "success_count" in match.columns else n_total
-        )
-
-    if not means:
-        return
-
-    # Winner: lexicographic (most successes, then lowest mean)
-    max_ns = max(success_counts) if success_counts else n_total
-    if "success_count" in grouped_df.columns:
-        sorted_winner = grouped_df.sort_values(
-            ["success_count", "totalrank"], ascending=[False, True]
-        )
-        winner_id = sorted_winner.iloc[0]["experiment_id"] if not sorted_winner.empty else None
-    else:
-        winner_id = grouped_df.sort_values("totalrank").iloc[0]["experiment_id"] \
-                    if not grouped_df.empty else None
-
-    colors  = [COLOR_BEST if lb == winner_id else COLOR_DEFAULT for lb in labels]
-    # Hatch only bars excluded from final comparison (ns < max observed ns)
-    hatches = ["///" if sc < max_ns else "" for sc in success_counts]
-
-    x = np.arange(len(labels))
-    fig, ax = plt.subplots(figsize=(max(5, len(labels) * 0.9), 4.5))
-
-    for i, (m, s, c, h) in enumerate(zip(means, stds, colors, hatches)):
-        is_zero = np.isnan(m) or m == 0
-        bar_height = 0.01 if is_zero else m
-        bar_std = 0.0 if is_zero else s
-        
-        alpha_val = 0.0 if is_zero else 1.0
-        edge_c = "none" if is_zero else "black"
-        
-        ax.bar(x[i], bar_height, yerr=bar_std, capsize=5 if not is_zero else 0,
-               color=c, edgecolor=edge_c, linewidth=0.6, hatch=h, alpha=alpha_val,
-               error_kw={"elinewidth": 1.2, "ecolor": "black"})
-
-
-    max_mean_val = max(means) if any(~np.isnan(means)) else 10.0
-    
-    for i, (m, s, ns) in enumerate(zip(means, stds, success_counts)):
-        mean_val = 0.0 if (np.isnan(m) or m == 0) else m
-        std_val = 0.0 if np.isnan(s) else s
-        
-        txt = f"{mean_val:.2f}\n({ns}/{n_total})"
-        
-        if mean_val == 0:
-            y_pos = max_mean_val * 0.02 
-        else:
-            y_pos = mean_val + std_val + max_mean_val * 0.02
-            
-        ax.text(x[i], y_pos, txt,
-                ha="center", va="bottom", fontsize=7, 
-                color="black" if mean_val > 0 else "darkred")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-
-    # Build axis label from GROUP_PARAMS_COLUMNS header, stripping LaTeX for matplotlib
-    # Use param header directly as matplotlib mathtext (keep $ signs)
-    params_str = ", ".join(h for _, h in group_params_columns)
-    ax.set_xlabel(f"Parameter group ({params_str})")
-    ax.set_ylabel("Mean total rank (lower = better)")
-    ax.set_title(title or f"{prefix} -- grouped ranking")
-    ax.grid(axis="y", linestyle="--", alpha=0.4)
-    ax.set_ylim(0, max(m + s for m, s in zip(means, stds)) * 1.35)
-
-    legend_handles = [
-        mpatches.Patch(color=COLOR_BEST,    label="Winner"),
-        mpatches.Patch(color=COLOR_DEFAULT, label="Other groups"),
-    ]
-    if any(h for h in hatches):
-        legend_handles.append(
-            mpatches.Patch(facecolor="white", edgecolor="black",
-                           hatch="///", label=f"$n_s < {max_ns}$ (excluded)")
-        )
-    ax.legend(handles=legend_handles, loc="upper center",
-              bbox_to_anchor=(0.5, -0.12), ncol=len(legend_handles),
-              framealpha=0.9, fontsize=8)
-
-    fig.tight_layout()
-    _save(fig, output_dir / "figures" / f"{prefix}_grouped_bar.png")
-
-
-# ── Grouped heatmap ───────────────────────────────────────────────────────────
-
-def save_grouped_heatmap(
-    ranked_df, groups_cfg, group_params_columns,
-    output_dir, prefix, title="",
-):
-    if groups_cfg is None:
+    """
+    Creates a single, full-width figure containing both the heatmap (a)
+    and the grouped bar chart (b), adhering to IEEE formatting standards.
+    """
+    if groups_cfg is None or grouped_df is None:
         return
 
     rank_col = "rank_group" if "rank_group" in ranked_df.columns else "group_id"
     if rank_col not in ranked_df.columns:
         return
 
-    # Rows = rank_groups (G1, G2...), Cols = group_ids (1.01, 1.02...)
+    # Full page width IEEE Access (two-column span) -> ~7.16 inches.
+    fig = plt.figure(figsize=(7.16, 2.3))
+    
+    # GridSpec used to make the bar chart wider than the heatmap (ratios 1 to 2.0)
+    gs = plt.GridSpec(1, 2, figure=fig, width_ratios=[1.0, 2.0])
+    ax_heat = fig.add_subplot(gs[0, 0])
+    ax_bar  = fig.add_subplot(gs[0, 1])
+    
+    # Common parameter string for axes
+    params_str = ", ".join(h for _, h in group_params_columns)
+
+    # ==========================================================
+    # 1. Heatmap (Left Panel - ax_heat)
+    # ==========================================================
     group_ids_present = sorted(
         ranked_df["group_id"].unique(),
         key=lambda x: [int(p) for p in str(x).split(".")],
     )
     rank_group_ids = list(groups_cfg.keys())
 
-    matrix      = np.full((len(rank_group_ids), len(group_ids_present)), np.nan)
+    matrix       = np.full((len(rank_group_ids), len(group_ids_present)), np.nan)
     invalid_mask = np.zeros_like(matrix, dtype=bool)
 
     for i, rg in enumerate(rank_group_ids):
@@ -350,53 +255,141 @@ def save_grouped_heatmap(
 
     col_labels = [str(g) for g in group_ids_present]
 
-    cell_w = max(5, len(group_ids_present) * 1.6)
-    cell_h = max(3, len(rank_group_ids) * 0.6)
-    fig, ax = plt.subplots(figsize=(cell_w, cell_h))
-
     display_matrix = np.where(invalid_mask, np.nan, matrix)
     vmin = np.nanmin(matrix) if not np.all(np.isnan(display_matrix)) else 0
     vmax = np.nanmax(matrix) if not np.all(np.isnan(display_matrix)) else 1
-    im = ax.imshow(display_matrix, aspect="auto", cmap="viridis_r", vmin=vmin, vmax=vmax)
+    
+    im = ax_heat.imshow(display_matrix, aspect="auto", cmap="viridis_r", vmin=vmin, vmax=vmax)
 
-    # Grey fill for invalid
     if invalid_mask.any():
         grey = np.where(invalid_mask, 1.0, np.nan)
         cmap_grey = matplotlib.colors.ListedColormap([COLOR_INVALID])
-        ax.imshow(grey, aspect="auto", cmap=cmap_grey, vmin=0, vmax=1, alpha=0.6)
+        ax_heat.imshow(grey, aspect="auto", cmap=cmap_grey, vmin=0, vmax=1, alpha=0.6)
 
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
             val = matrix[i, j]
             if np.isnan(val):
-                ax.text(j, i, "--", ha="center", va="center", fontsize=8)
+                ax_heat.text(j, i, "--", ha="center", va="center", fontsize=6.5)
             else:
                 text     = f"({val:.1f})" if invalid_mask[i, j] else f"{val:.1f}"
                 norm_val = (val - vmin) / (vmax - vmin + 1e-9)
                 color    = "black" if (norm_val < 0.6 or invalid_mask[i, j]) else "white"
-                ax.text(j, i, text, ha="center", va="center", fontsize=8, color=color)
+                ax_heat.text(j, i, text, ha="center", va="center", fontsize=6.5, color=color)
 
-    ax.set_xticks(range(len(col_labels)))
-    ax.set_xticklabels(col_labels, fontsize=8, rotation=30, ha="right")
-    # Y axis: use group IDs (G1, G2...) not parameter values
-    ax.set_yticks(range(len(rank_group_ids)))
-    ax.set_yticklabels(rank_group_ids, fontsize=9)
-    params_str = ", ".join(h for _, h in group_params_columns)
-    ax.set_xlabel("Ranking group (scene + method)", fontsize=10)
-    ax.set_ylabel(f"Parameter group ({params_str})", fontsize=10)
-    ax.set_title(title or f"{prefix} -- totalrank heatmap", fontsize=11)
+    ax_heat.set_xticks(range(len(col_labels)))
+    ax_heat.set_xticklabels(col_labels, fontsize=7, rotation=30, ha="right")
+    ax_heat.set_yticks(range(len(rank_group_ids)))
+    ax_heat.set_yticklabels(rank_group_ids, fontsize=7)
+    
+    # labelpad garantiza que el nombre del eje baje lo suficiente y no choque con los números rotados
+    ax_heat.set_xlabel("Scene–method configurations", fontsize=8, labelpad=3)
+    ax_heat.set_ylabel("Parametric variations", fontsize=8)
 
-    cbar = plt.colorbar(im, ax=ax, label="totalrank (lower = better)", shrink=0.8)
+    # Colorbar attached to heatmap
+    cbar = plt.colorbar(im, ax=ax_heat, shrink=0.8, pad=0.04)
+    cbar.set_label(r"Total rank ($\text{total}_{\text{rank}}$)", fontsize=8)
+    cbar.ax.tick_params(labelsize=7)
 
-    legend_handles = [
-        mpatches.Patch(facecolor=COLOR_INVALID, alpha=0.6,
-                       label="Invalid — below threshold"),
+    # RE-ALINEACIÓN INFERIOR (Left Panel): Leyenda bajada a -0.32 y subfigura a -0.52
+    legend_handles_heat = [
+        mpatches.Patch(facecolor=COLOR_INVALID, alpha=0.6, label="Invalid — below threshold"),
     ]
-    ax.legend(handles=legend_handles, loc="upper center",
-              bbox_to_anchor=(0.5, -0.18), ncol=1, framealpha=0.9, fontsize=8)
+    ax_heat.legend(handles=legend_handles_heat, loc="upper center",
+                   bbox_to_anchor=(0.5, -0.32), ncol=1, framealpha=0.9, fontsize=7)
+    
+    ax_heat.text(0.5, -0.52, "(a) Total rank distribution", transform=ax_heat.transAxes, 
+                 ha="center", va="top", fontsize=8, weight="bold")
 
-    fig.tight_layout()
-    _save(fig, output_dir / "figures" / f"{prefix}_grouped_heatmap.png")
+
+    # ==========================================================
+    # 2. Bar Chart (Right Panel - ax_bar)
+    # ==========================================================
+    n_total = 4
+    labels, means, stds, success_counts = [], [], [], []
+    for gid, gdata in groups_cfg.items():
+        match = grouped_df[grouped_df["experiment_id"] == gid]
+        if match.empty:
+            continue
+        sub = ranked_df[ranked_df[rank_col] == gid]["totalrank"]
+        labels.append(gid)
+        means.append(float(match["totalrank"].values[0]))
+        stds.append(sub.std(ddof=1) if len(sub) > 1 else 0.0)
+        success_counts.append(
+            int(match["success_count"].values[0]) if "success_count" in match.columns else n_total
+        )
+
+    if means:
+        max_ns = max(success_counts) if success_counts else n_total
+        if "success_count" in grouped_df.columns:
+            sorted_winner = grouped_df.sort_values(["success_count", "totalrank"], ascending=[False, True])
+            winner_id = sorted_winner.iloc[0]["experiment_id"] if not sorted_winner.empty else None
+        else:
+            winner_id = grouped_df.sort_values("totalrank").iloc[0]["experiment_id"] if not grouped_df.empty else None
+
+        colors  = [COLOR_BEST if lb == winner_id else COLOR_DEFAULT for lb in labels]
+        hatches = ["///" if sc < max_ns else "" for sc in success_counts]
+
+        x = np.arange(len(labels))
+        
+        for i, (m, s, c, h) in enumerate(zip(means, stds, colors, hatches)):
+            is_zero = np.isnan(m) or m == 0
+            bar_height = 0.01 if is_zero else m
+            bar_std = 0.0 if is_zero else s
+            alpha_val = 0.0 if is_zero else 1.0
+            edge_c = "none" if is_zero else "black"
+            
+            ax_bar.bar(x[i], bar_height, yerr=bar_std, capsize=4 if not is_zero else 0,
+                       color=c, edgecolor=edge_c, linewidth=0.6, hatch=h, alpha=alpha_val,
+                       error_kw={"elinewidth": 1.0, "ecolor": "black"})
+
+        max_mean_val = max(means) if any(~np.isnan(means)) else 10.0
+        
+        for i, (m, s, ns) in enumerate(zip(means, stds, success_counts)):
+            mean_val = 0.0 if (np.isnan(m) or m == 0) else m
+            std_val = 0.0 if np.isnan(s) else s
+            
+            # SOLUCIÓN TEXTO ROJO: Modificado y_pos base para empujar los textos en cero 
+            # un poco más arriba y evitar que pisen la línea negra del eje
+            txt = f"{mean_val:.2f}\n({ns}/{n_total})"
+            y_pos = max_mean_val * 0.06 if mean_val == 0 else mean_val + std_val + max_mean_val * 0.02
+            ax_bar.text(x[i], y_pos, txt, ha="center", va="bottom", fontsize=6.5, 
+                        color="black" if mean_val > 0 else "darkred")
+
+        ax_bar.set_xticks(x)
+        # El mapeo de rotación ahora coincide exactamente con el del Heatmap
+        ax_bar.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
+        
+        # labelpad agregado para empujar de forma idéntica el título del eje X
+        ax_bar.set_xlabel("Parametric variations", fontsize=8, labelpad=3)
+        ax_bar.set_ylabel(r"Group rank ($\text{group}_{\text{rank}}$)", fontsize=8)
+        ax_bar.grid(axis="y", linestyle="--", alpha=0.4)
+        ax_bar.set_ylim(0, max(m + s for m, s in zip(means, stds)) * 1.35)
+
+        # RE-ALINEACIÓN INFERIOR (Right Panel): Sincronizado exactamente con el panel izquierdo
+        legend_handles_bar = [
+            mpatches.Patch(color=COLOR_BEST,    label="Winner"),
+            mpatches.Patch(color=COLOR_DEFAULT, label="Other groups"),
+        ]
+        if any(h for h in hatches):
+            legend_handles_bar.append(
+                mpatches.Patch(facecolor="white", edgecolor="black", hatch="///", 
+                               label=f"$n_s < {max_ns}$ (excluded)")
+            )
+        
+        ax_bar.legend(handles=legend_handles_bar, loc="upper center",
+                    bbox_to_anchor=(0.5, -0.32), ncol=len(legend_handles_bar),
+                    framealpha=0.9, fontsize=7)
+
+        ax_bar.text(0.5, -0.52, "(b) Mean performance comparison", transform=ax_bar.transAxes, 
+                    ha="center", va="top", fontsize=8, weight="bold")
+
+    # Modificado el espacio inferior relativo (bottom=0.30) para acomodar los nuevos márgenes sin recortes
+    fig.subplots_adjust(bottom=0.30, wspace=0.35, top=0.94, left=0.08, right=0.96)
+    
+    # Save the combined figure
+    _save(fig, output_dir / "figures" / f"{prefix}_analysis.png")
+
 
 # ── Delta f comparison figure (robust_comparison section only) ────────────────
 
@@ -410,10 +403,10 @@ def save_delta_f_comparison_figure(
 
     rank_col = "rank_group" if "rank_group" in ranked_df.columns else "group_id"
 
-    # One bar per lambda, averaged across all group_ids
-    lambda_labels = []
-    lambda_means  = []
-    lambda_valid  = []   # True if n_s=4 for this rank_group
+    # One bar per mu, averaged across all group_ids
+    mu_labels = []
+    mu_means  = []
+    mu_valid  = []   # True if n_s=4 for this rank_group
 
     n_total = len(set(ranked_df["group_id"].unique()))
 
@@ -424,21 +417,21 @@ def save_delta_f_comparison_figure(
                    and not valid.empty else float("nan")
         ns       = len(valid)
 
-        lambda_labels.append(gdata.get("lambda", rg))
-        lambda_means.append(mean_df)
-        lambda_valid.append(ns == n_total)
+        mu_labels.append(gdata.get("mu", rg))
+        mu_means.append(mean_df)
+        mu_valid.append(ns == n_total)
 
     # Baseline delta_f for improvement line
     baseline_idx = list(groups_cfg.keys()).index(baseline_rg) \
                    if baseline_rg in groups_cfg else 0
-    baseline_val = lambda_means[baseline_idx] \
-                   if not pd.isna(lambda_means[baseline_idx]) else None
+    baseline_val = mu_means[baseline_idx] \
+                   if not pd.isna(mu_means[baseline_idx]) else None
 
     fig, ax = plt.subplots(figsize=(10, 4.5))
-    x = np.arange(len(lambda_labels))
+    x = np.arange(len(mu_labels))
 
     bar_colors = []
-    for i, (mean, valid) in enumerate(zip(lambda_means, lambda_valid)):
+    for i, (mean, valid) in enumerate(zip(mu_means, mu_valid)):
         if i == baseline_idx:
             bar_colors.append(COLOR_DEFAULT)
         elif not valid:
@@ -454,13 +447,13 @@ def save_delta_f_comparison_figure(
                 bar_colors.append(COLOR_DEFAULT)
 
     bars = ax.bar(
-        x, lambda_means, color=bar_colors,
+        x, mu_means, color=bar_colors,
         edgecolor="black", linewidth=0.6, width=0.6,
     )
 
     # Annotate bars
-    max_val = max((v for v in lambda_means if not np.isnan(v)), default=1.0)
-    for i, (bar, valid) in enumerate(zip(bars, lambda_valid)):
+    max_val = max((v for v in mu_means if not np.isnan(v)), default=1.0)
+    for i, (bar, valid) in enumerate(zip(bars, mu_valid)):
         h = bar.get_height()
         if not np.isnan(h):
             suffix = "" if valid else " (N/A)"
@@ -481,11 +474,11 @@ def save_delta_f_comparison_figure(
         )
 
     ax.set_xticks(x)
-    ax.set_xticklabels(lambda_labels, fontsize=8)
-    ax.set_xlabel(r"$\lambda$")
+    ax.set_xticklabels(mu_labels, fontsize=8)
+    ax.set_xlabel(r"$\mu$")
     ax.set_ylabel(r"Mean accumulated $\Delta f$ (lower = more robust)")
     ax.set_title(
-        r"Neighborhood degradation across $\lambda$ values",
+        r"Neighborhood degradation across $\mu$ values",
         fontsize=9,
     )
     ax.grid(axis="y", linestyle="--", alpha=0.35, linewidth=0.6)
@@ -524,11 +517,16 @@ def save_all_figures(
         )
 
     if groups_cfg is not None and group_params_columns:
-        save_grouped_bar(ranked_df, grouped_df, groups_cfg, group_params_columns,
-                         output_dir, prefix, scene_name)
-        save_grouped_heatmap(ranked_df, groups_cfg, group_params_columns,
-                             output_dir, prefix, scene_name)
-
+        # Generate the unified IEEE multipanel figure
+        save_combined_grouped_analysis(
+            ranked_df=ranked_df,
+            grouped_df=grouped_df,
+            groups_cfg=groups_cfg,
+            group_params_columns=group_params_columns,
+            output_dir=output_dir,
+            prefix=prefix,
+            title=scene_name
+        )
 
     # ── Delta f comparison (robust_comparison section only) ───────────────────
     if robust_comparison_cfg is not None and experiments_cfg is not None:

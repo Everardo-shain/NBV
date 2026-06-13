@@ -280,7 +280,7 @@ def grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
     param_col_hdrs = {
         "id":            "ID",
         "success_count": rf"$n_s/{n_total}$",
-        "totalrank":     r"$group_{\text{rank}}$",
+        "totalrank":     r"$\text{group}_{\text{rank}}$",
         **{k: h for k, h in group_params_columns},
     }
     param_aligns = (["l"] * (1 + len(group_params_columns)) + ["c", "r"])
@@ -350,16 +350,14 @@ def grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
     )
 
 
-# ── Robust comparison grouped table ──────────────────────────────────────────
-
 def robust_comparison_table(
     ranked_df, grouped_df, experiments_cfg,
     baseline_rg, delta_f_min_improvement,
     caption, label,
 ):
     """
-    Side-by-side comparison table for all lambda values.
-    Columns: lambda | n_s/4 | totalrank | acc_delta_f | delta_f improvement % | Selected
+    Side-by-side comparison table for all mu values.
+    Columns: mu | n_s/4 | totalrank | acc_delta_f | delta_f improvement % | Selected
     """
     # Get baseline delta_f from grouped_df
     baseline_row = grouped_df[grouped_df["experiment_id"] == baseline_rg]
@@ -371,10 +369,24 @@ def robust_comparison_table(
 
     n_total = 4
 
+    # ── Sort grouped_df by experiment_id in natural mu order ─────────────
+    def _sort_key(eid):
+        parts = str(eid).replace("Y", "0").split(".")
+        try:
+            return [int(p) for p in parts]
+        except ValueError:
+            return [0]
+
+    grouped_df_sorted = grouped_df.copy()
+    grouped_df_sorted["_sort_key"] = grouped_df_sorted["experiment_id"].apply(_sort_key)
+    grouped_df_sorted = grouped_df_sorted.sort_values("_sort_key").drop(
+        columns="_sort_key"
+    ).reset_index(drop=True)
+
     rows     = []
     selected = None
 
-    for _, grp_row in grouped_df.iterrows():
+    for _, grp_row in grouped_df_sorted.iterrows():
         rg       = grp_row["experiment_id"]
         ns       = int(grp_row["success_count"]) \
                    if "success_count" in grp_row else n_total
@@ -384,10 +396,8 @@ def robust_comparison_table(
                    if "acc_delta_f" in grp_row and not pd.isna(grp_row["acc_delta_f"]) \
                    else float("nan")
 
-        # lambda label from GROUPS
-        lam_label = grp_row.get("lambda", rg)
+        m_label = grp_row.get("mu", rg)
 
-        # compute delta_f improvement vs baseline
         if rg == baseline_rg or pd.isna(baseline_df) or pd.isna(df_val):
             improvement = float("nan")
         elif baseline_df == 0:
@@ -395,13 +405,11 @@ def robust_comparison_table(
         else:
             improvement = 100.0 * (baseline_df - df_val) / abs(baseline_df)
 
-        # totalrank cost vs baseline
         if rg == baseline_rg or pd.isna(baseline_tr) or pd.isna(tr):
             tr_cost = float("nan")
         else:
             tr_cost = 100.0 * (tr - baseline_tr) / abs(baseline_tr)
 
-        # selection: minimum lambda with n_s=4 AND improvement >= threshold
         passes = (ns == n_total) and \
                  (not pd.isna(improvement)) and \
                  (improvement >= delta_f_min_improvement)
@@ -409,17 +417,15 @@ def robust_comparison_table(
         if passes and selected is None and rg != baseline_rg:
             selected = rg
 
-        # format cells
         ns_fmt   = str(ns)
-        tr_fmt   = _fmt(tr, 3)   if not pd.isna(tr)          else "--"
-        df_fmt   = _fmt(df_val, 3) if not pd.isna(df_val)    else "--"
+        tr_fmt   = _fmt(tr, 3)     if not pd.isna(tr)      else "--"
+        df_fmt   = _fmt(df_val, 3) if not pd.isna(df_val)  else "--"
         imp_fmt  = (f"{improvement:.1f}\\%" if not pd.isna(improvement) else "--")
         cost_fmt = (f"+{tr_cost:.1f}\\%" if (not pd.isna(tr_cost) and tr_cost >= 0)
                     else (f"{tr_cost:.1f}\\%" if not pd.isna(tr_cost) else "--"))
         sel_fmt  = r"\textbf{yes}" if rg == selected else \
                    ("--" if rg == baseline_rg else "no")
 
-        # bold entire row if selected
         if rg == selected:
             ns_fmt   = _bold(ns_fmt)
             tr_fmt   = _bold(tr_fmt)
@@ -427,29 +433,28 @@ def robust_comparison_table(
             imp_fmt  = _bold(imp_fmt)
             cost_fmt = _bold(cost_fmt)
 
-        # italic if n_s < 4 and not baseline
         if ns < n_total and rg != baseline_rg:
             ns_fmt  = _italic(ns_fmt)
             tr_fmt  = _italic(tr_fmt)
             df_fmt  = _italic(df_fmt)
 
         rows.append(
-            f"    {lam_label} & {ns_fmt} & {tr_fmt} & "
+            f"    {m_label} & {ns_fmt} & {tr_fmt} & "
             f"{df_fmt} & {imp_fmt} & {cost_fmt} & {sel_fmt} \\\\"
         )
 
     if selected is None:
         rows.append(
             r"    \multicolumn{7}{l}{"
-            r"\textit{No $\lambda > 0$ achieved valid results across all "
+            r"\textit{No $\mu > 0$ achieved valid results across all "
             r"sub-experiments with sufficient $\Delta f$ improvement.}} \\"
         )
 
     spec = "@{}lcrrrrl@{}"
     raw_headers = [
-        r"$\lambda$", r"$n_s/4$", r"$total_{\text{rank}}$", 
-        r"Acc. $\Delta f$", r"$\Delta f$ impr. (\%)", 
-        r"$total_{\text{rank}}$ cost (\%)", "Selected"
+        r"$\mu$", r"$n_s/4$", r"$\text{total}_{\text{rank}}$",
+        r"Acc. $\Delta f$", r"$\Delta f$ impr. (\%)",
+        r"$\text{total}_{\text{rank}}$ cost (\%)", "Selected"
     ]
     header_row = " & ".join(_bold(h) for h in raw_headers) + r" \\"
     body = "\n".join(rows)
@@ -528,10 +533,10 @@ def save_tables(
             experiments_cfg      = experiments_cfg or {},
             baseline_rg          = robust_comparison_cfg["baseline_rg"],
             delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
-            caption              = f"{caption_prefix} Lambda Selection Summary.",
-            label                = f"tab:{prefix}_lambda_selection",
+            caption              = f"{caption_prefix} mu Selection Summary.",
+            label                = f"tab:{prefix}_mu_selection",
         )
-        (tables_dir / f"{prefix}_lambda_selection.tex").write_text(
+        (tables_dir / f"{prefix}_mu_selection.tex").write_text(
             rc, encoding="utf-8"
         )
 

@@ -70,17 +70,17 @@ GROUPS = {
 }
 
 GROUP_PARAMS_COLUMNS = [
-    ("alpha_sf",  r"$\alpha_{\text{sf}}$"), ("w_m",  r"$w_{\text{M}}$"), ("sw_d",  r"$sw_{\text{d}}$"), ("sw_e",  r"$sw_{\text{e}}$")
+    ("alpha_sf",  r"$\alpha_{\text{sf}}$"), ("w_m",  r"$w_{\text{M}}$"), ("sw_d",  r"$\mathit{sw}_{\text{d}}$"), ("sw_e",  r"$\mathit{sw}_{\text{e}}$")
 ]
 
 # ── Parameters table columns ──────────────────────────────────────────────────
 PARAMS_COLUMNS = [
-    ("environment", "Environ."),
+    ("environment", "Scene"),
     ("method",      "Method"),
     ("alpha_sf",  r"$\alpha_{\text{sf}}$"),
     ("w_m",  r"$w_{\text{M}}$"),
-    ("sw_d",  r"$sw_{\text{d}}$"),
-    ("sw_e",  r"$sw_{\text{e}}$")
+    ("sw_d",  r"$\mathit{sw}_{\text{d}}$"),
+    ("sw_e",  r"$\mathit{sw}_{\text{e}}$")
 ]
 
 # ── Ranking configuration ─────────────────────────────────────────────────────
