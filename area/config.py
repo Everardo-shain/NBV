@@ -22,7 +22,8 @@ and comparison grid figures. Valid keys:
 # ── Section identity ──────────────────────────────────────────────────────────
 SECTION_META = {
     "prefix":         "area",
-    "caption_prefix": "Area Factor",
+    "caption_prefix": "Area factor",
+    "type":           "standard",
 }
 
 # ── Metrics to include ────────────────────────────────────────────────────────

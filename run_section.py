@@ -154,7 +154,8 @@ def run_section(section: str, verbose: bool = True) -> None:
         params_note          = getattr(cfg, "PARAMS_NOTE", None),
         include_method       = False,
         metrics              = cfg.METRICS,
-        robust_comparison_cfg = robust_comparison_cfg,       
+        robust_comparison_cfg = robust_comparison_cfg,  
+        section_type         = meta["type"],     
     )
 
     # ── 5. Excel export (Google Drive) ───────────────────────────────────────
@@ -231,6 +232,7 @@ def run_section(section: str, verbose: bool = True) -> None:
         experiments_cfg      = loaded_exp_cfg,
         metrics              = cfg.METRICS,
         robust_comparison_cfg = robust_comparison_cfg,
+        section_type         = meta["type"],    
     )
 
     print(f"\n  Done. All outputs in {out_dir}/")

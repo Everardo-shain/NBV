@@ -22,7 +22,8 @@ and comparison grid figures. Valid keys:
 # ── Section identity ──────────────────────────────────────────────────────────
 SECTION_META = {
     "prefix":         "motion",
-    "caption_prefix": "Motion Factor",
+    "caption_prefix": "Motion factor",
+    "type":           "standard",
 }
 
 # ── Metrics to include ────────────────────────────────────────────────────────

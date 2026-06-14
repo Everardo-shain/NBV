@@ -23,6 +23,7 @@ does not enter totalrank.
 SECTION_META = {
     "prefix":         "robust",
     "caption_prefix": "Robust Optimization",
+    "type":           "standard",
 }
 
 # ── Metrics to include ────────────────────────────────────────────────────────

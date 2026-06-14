@@ -22,7 +22,8 @@ and comparison grid figures. Valid keys:
 # ── Section identity ──────────────────────────────────────────────────────────
 SECTION_META = {
     "prefix":         "distance_energy",
-    "caption_prefix": "Distance and Energy Sub-Factors",
+    "caption_prefix": "Distance and energy sub-factors",
+    "type":           "standard",
 }
 
 # ── Metrics to include ────────────────────────────────────────────────────────

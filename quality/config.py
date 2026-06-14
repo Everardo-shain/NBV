@@ -21,7 +21,8 @@ and comparison grid figures. Valid keys:
 # ── Section identity ──────────────────────────────────────────────────────────
 SECTION_META = {
     "prefix":         "quality",
-    "caption_prefix": "Quality Factor",
+    "caption_prefix": "Quality factor",
+    "type":           "standard",
 }
 # ── Metrics to include ────────────────────────────────────────────────────────
 METRICS = ["distance", "energy", "retrieved", "quality", "time"]

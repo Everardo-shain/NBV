@@ -253,6 +253,7 @@ def params_table(experiments_cfg, params_columns, caption, label, note=None):
     return (
         r"\begin{table}[ht]" "\n"
         r"\centering" "\n"
+        r"\footnotesize" "\n"
         rf"\caption{{{caption}}}" "\n"
         rf"\label{{{label}}}" "\n"
         rf"\begin{{tabular}}{{{spec}}}" "\n"
@@ -485,6 +486,7 @@ def save_tables(
     params_note=None, include_method=True,
     metrics=None,
     robust_comparison_cfg=None, 
+    section_type="standard",
 ):
     if metrics is None:
         metrics = list(_METRIC_REGISTRY.keys())
@@ -492,52 +494,60 @@ def save_tables(
     tables_dir = output_dir / "tables"
     tables_dir.mkdir(parents=True, exist_ok=True)
 
-    if experiments_cfg is not None and params_columns is not None:
-        p = params_table(experiments_cfg, params_columns,
-                         caption=f"{caption_prefix} Experiment Variable Parameters.",
-                         label=f"tab:{prefix}_params", note=params_note)
-        (tables_dir / f"{prefix}_params.tex").write_text(p, encoding="utf-8")
+    if section_type == "standard":
 
-    base_df = full_summary if full_summary is not None else ranked_df
-    if "is_valid" not in base_df.columns and "is_valid" in ranked_df.columns:
-        valid_col = ranked_df[["experiment_id", "is_valid"]].drop_duplicates()
-        base_df   = base_df.merge(valid_col, on="experiment_id", how="left")
-        base_df["is_valid"] = base_df["is_valid"].fillna(True)
+        if experiments_cfg is not None and params_columns is not None:
+            p = params_table(experiments_cfg, params_columns,
+                            caption=f"{caption_prefix} experimental mapping and ID definitions.",
+                            label=f"tab:{prefix}_params", note=params_note)
+            (tables_dir / f"{prefix}_params.tex").write_text(p, encoding="utf-8")
 
-    res = results_table(_sort_by_id(base_df),
-                        caption=f"{caption_prefix} Experiment Results.",
-                        label=f"tab:{prefix}_results",
+        base_df = full_summary if full_summary is not None else ranked_df
+        if "is_valid" not in base_df.columns and "is_valid" in ranked_df.columns:
+            valid_col = ranked_df[["experiment_id", "is_valid"]].drop_duplicates()
+            base_df   = base_df.merge(valid_col, on="experiment_id", how="left")
+            base_df["is_valid"] = base_df["is_valid"].fillna(True)
+
+        res = results_table(_sort_by_id(base_df),
+                            caption=r"{caption_prefix} results. Bold indicates the winner per metric and italics rows denote configurations excluded due to $\text{Retr.} < 85\%$.",
+                            label=f"tab:{prefix}_results",
+                            include_method=include_method, metrics=metrics)
+        (tables_dir / f"{prefix}_results.tex").write_text(res, encoding="utf-8")
+
+        valid_ranked = (ranked_df[ranked_df["is_valid"] == True].copy()
+                        if "is_valid" in ranked_df.columns else ranked_df.copy())
+        rnk = ranked_table(_sort_by_id(valid_ranked),
+                        caption=f"{caption_prefix} ranked results. Only non-excluded configurations are displayed; bold indicates the winner per rank.",
+                        label=f"tab:{prefix}_ranked",
                         include_method=include_method, metrics=metrics)
-    (tables_dir / f"{prefix}_results.tex").write_text(res, encoding="utf-8")
+        (tables_dir / f"{prefix}_ranked.tex").write_text(rnk, encoding="utf-8")
 
-    valid_ranked = (ranked_df[ranked_df["is_valid"] == True].copy()
-                    if "is_valid" in ranked_df.columns else ranked_df.copy())
-    rnk = ranked_table(_sort_by_id(valid_ranked),
-                       caption=f"{caption_prefix} Experiment Ranked Results.",
-                       label=f"tab:{prefix}_ranked",
-                       include_method=include_method, metrics=metrics)
-    (tables_dir / f"{prefix}_ranked.tex").write_text(rnk, encoding="utf-8")
+        if grouped_df is not None and groups_cfg is not None and group_params_columns is not None:
+            grp = grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
+                                    caption=r"{caption_prefix} grouped ranked results. Bold indicates the winning configuration; underlines denote the specific metric ($n_s/4$ or $\text{group}_{\text{rank}}$) that determined the selection.",
+                                    label=f"tab:{prefix}_grouped_ranked")
+            (tables_dir / f"{prefix}_grouped_ranked.tex").write_text(grp, encoding="utf-8")
 
-    if grouped_df is not None and groups_cfg is not None and group_params_columns is not None:
-        grp = grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
-                                   caption=f"{caption_prefix} Grouped Ranked Results.",
-                                   label=f"tab:{prefix}_grouped_ranked")
-        (tables_dir / f"{prefix}_grouped_ranked.tex").write_text(grp, encoding="utf-8")
+        
+        # ── Robust comparison table (robust_comparison section only) ─────────────
+        if robust_comparison_cfg is not None and grouped_df is not None:
+            rc = robust_comparison_table(
+                ranked_df            = ranked_df,
+                grouped_df           = grouped_df,
+                experiments_cfg      = experiments_cfg or {},
+                baseline_rg          = robust_comparison_cfg["baseline_rg"],
+                delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
+                caption              = f"{caption_prefix} experiments mu selection summary.",
+                label                = f"tab:{prefix}_mu_selection",
+            )
+            (tables_dir / f"{prefix}_mu_selection.tex").write_text(
+                rc, encoding="utf-8"
+            )
 
-       
-    # ── Robust comparison table (robust_comparison section only) ─────────────
-    if robust_comparison_cfg is not None and grouped_df is not None:
-        rc = robust_comparison_table(
-            ranked_df            = ranked_df,
-            grouped_df           = grouped_df,
-            experiments_cfg      = experiments_cfg or {},
-            baseline_rg          = robust_comparison_cfg["baseline_rg"],
-            delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
-            caption              = f"{caption_prefix} mu Selection Summary.",
-            label                = f"tab:{prefix}_mu_selection",
-        )
-        (tables_dir / f"{prefix}_mu_selection.tex").write_text(
-            rc, encoding="utf-8"
-        )
+        print(f"  Tables -> {tables_dir}/{prefix}_{{params,results,ranked,grouped_ranked}}.tex")
 
-    print(f"  Tables -> {tables_dir}/{prefix}_{{params,results,ranked,grouped_ranked}}.tex")
+    elif section_type == "comparison":
+        pass 
+
+    else:
+        raise ValueError(f"Unknown section_type: {section_type!r}")

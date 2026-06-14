@@ -22,41 +22,46 @@ and comparison grid figures. Valid keys:
 # ── Section identity ──────────────────────────────────────────────────────────
 SECTION_META = {
     "prefix":         "final_obj_comparison",
-    "caption_prefix": "Final Objective Function Comparison",
+    "caption_prefix": "Objective function final comparison",
+    "type":           "comparison",
 }
 
 # ── Metrics to include ────────────────────────────────────────────────────────
-METRICS = ["distance", "energy", "retrieved", "quality", "time"]
+METRICS = ["retrieved"]
 
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {
-    "stu_evol_1a5m5q":  {"id": "5.1.01", "group_id": "5.1", "rank_group": "5.Y.01", "environment": "Study Room",  "method": "ES",            "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
-    "stu_evol_original":  {"id": "5.1.02", "group_id": "5.1", "rank_group": "5.Y.02", "environment": "Study Room",  "method": "ES",            "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
+    "stu_evol_1a5m5q":  {"id": "4.1.03", "group_id": "1", "rank_group": "4.Y.03", "environment": "Study Room",  "method": "ES",            "Role": "Proposed"},
+    "stu_evol_original":  {"id": "3.1.01", "group_id": "1", "rank_group": "3.Y.01", "environment": "Study Room",  "method": "ES",            "Role": "Baseline"},
 
 
-    "stu_anne_1a5m5q":  {"id": "5.2.01", "group_id": "5.2", "rank_group": "5.Y.01", "environment": "Study Room",  "method": "SA", "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
-    "stu_anne_original":  {"id": "5.2.02", "group_id": "5.2", "rank_group": "5.Y.02", "environment": "Study Room",  "method": "SA", "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
+    "stu_anne_1a5m5q":  {"id": "4.2.03", "group_id": "2", "rank_group": "4.Y.03", "environment": "Study Room",  "method": "SA", "Role": "Proposed"},
+    "stu_anne_original":  {"id": "3.2.01", "group_id": "2", "rank_group": "3.Y.01", "environment": "Study Room",  "method": "SA", "Role": "Baseline"},
 
 
-    "lab_evol_1a5m5q":  {"id": "5.3.01", "group_id": "5.3", "rank_group": "5.Y.01", "environment": "Laboratory",  "method": "ES",            "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
-    "lab_evol_original":  {"id": "5.3.02", "group_id": "5.3", "rank_group": "5.Y.02", "environment": "Laboratory",  "method": "ES",            "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
+    "lab_evol_1a5m5q":  {"id": "4.3.03", "group_id": "3", "rank_group": "4.Y.03", "environment": "Laboratory",  "method": "ES",            "Role": "Proposed"},
+    "lab_evol_original":  {"id": "3.3.01", "group_id": "3", "rank_group": "3.Y.01", "environment": "Laboratory",  "method": "ES",            "Role": "Baseline"},
  
 
-    "lab_anne_1a5m5q":  {"id": "5.4.01", "group_id": "5.4", "rank_group": "5.Y.01", "environment": "Laboratory",  "method": "SA", "w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
-    "lab_anne_original":  {"id": "5.4.02", "group_id": "5.4", "rank_group": "5.Y.02", "environment": "Laboratory",  "method": "SA", "w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
+    "lab_anne_1a5m5q":  {"id": "4.4.03", "group_id": "4", "rank_group": "4.Y.03", "environment": "Laboratory",  "method": "SA", "Role": "Proposed"},
+    "lab_anne_original":  {"id": "3.4.01", "group_id": "4", "rank_group": "3.Y.01", "environment": "Laboratory",  "method": "SA", "Role": "Baseline"},
 }
 
 # ── Groups ────────────────────────────────────────────────────────────────────
 GROUPS = {
-    "5.Y.01": {"w_m": 0.5, "sw_d": 0.3, "sw_e": 0.7, "w_q": 0.5},
-    "5.Y.02": {"w_m": 1, "sw_d": 0.7, "sw_e": 0.3, "w_q": 0},
+    "4.Y.03": {"Role": "Proposed"},
+    "3.Y.01": {"Role": "Baseline"},
 }
 
 GROUP_PARAMS_COLUMNS = [
-    ("w_m",  r"$w_{\text{M}}$"),
-    ("sw_d",  r"$\mathit{sw}_{\text{D}}$"),
-    ("sw_e",  r"$\mathit{sw}_{\text{E}}$"),
-    ("w_q",  r"$w_{\text{Q}}$"),
+    ("Role",  "Role"),
+]
+
+# ── Parameters table columns ──────────────────────────────────────────────────
+PARAMS_COLUMNS = [
+    ("Role",  "Role"),
+    ("environment", "Scene"),
+    ("method",      "Method"),
 ]
 
 # ── Ranking configuration ─────────────────────────────────────────────────────

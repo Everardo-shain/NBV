@@ -505,37 +505,42 @@ def save_all_figures(
     group_params_columns=None, experiments_cfg=None,
     metrics=None,
     robust_comparison_cfg=None, 
+    section_type="standard",
 ):
     figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    if experiments_cfg:
-        save_comparison_grids(
-            experiments, ranked_df, experiments_cfg,
-            output_dir, prefix, scene_name, metrics=metrics,
-            group_params_columns=group_params_columns,
-        )
 
-    if groups_cfg is not None and group_params_columns:
-        # Generate the unified IEEE multipanel figure
-        save_combined_grouped_analysis(
-            ranked_df=ranked_df,
-            grouped_df=grouped_df,
-            groups_cfg=groups_cfg,
-            group_params_columns=group_params_columns,
-            output_dir=output_dir,
-            prefix=prefix,
-            title=scene_name
-        )
+    if section_type == "comparison":
+        if experiments_cfg:
+            save_comparison_grids(
+                experiments, ranked_df, experiments_cfg,
+                output_dir, prefix, scene_name, metrics=metrics,
+                group_params_columns=group_params_columns,
+            )
+    elif section_type == "standard":
+        if groups_cfg is not None and group_params_columns:
+            # Generate the unified IEEE multipanel figure
+            save_combined_grouped_analysis(
+                ranked_df=ranked_df,
+                grouped_df=grouped_df,
+                groups_cfg=groups_cfg,
+                group_params_columns=group_params_columns,
+                output_dir=output_dir,
+                prefix=prefix,
+                title=scene_name
+            )
 
-    # ── Delta f comparison (robust_comparison section only) ───────────────────
-    if robust_comparison_cfg is not None and experiments_cfg is not None:
-        save_delta_f_comparison_figure(
-            ranked_df               = ranked_df,
-            experiments_cfg         = experiments_cfg,
-            groups_cfg              = groups_cfg,
-            baseline_rg             = robust_comparison_cfg["baseline_rg"],
-            delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
-            output_dir              = output_dir,
-            prefix                  = prefix,
-        )
+        # ── Delta f comparison (robust_comparison section only) ───────────────────
+        if robust_comparison_cfg is not None and experiments_cfg is not None:
+            save_delta_f_comparison_figure(
+                ranked_df               = ranked_df,
+                experiments_cfg         = experiments_cfg,
+                groups_cfg              = groups_cfg,
+                baseline_rg             = robust_comparison_cfg["baseline_rg"],
+                delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
+                output_dir              = output_dir,
+                prefix                  = prefix,
+            )
+    else:
+        raise ValueError(f"Unknown section_type: {section_type!r}")
