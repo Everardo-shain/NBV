@@ -29,28 +29,28 @@ SECTION_META = {
 # ── Metrics to include ────────────────────────────────────────────────────────
 METRICS = ["retrieved"]
 
+# ── Metrics to include in figures ─────────────────────────────────────────────
+FIG_METRICS = ["distance", "energy", "retrieved", "quality", "time"]
+
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {
-    "stu_evol_1a5m5q":  {"id": "4.1.03", "group_id": "1", "rank_group": "4.Y.03", "environment": "Study Room",  "method": "ES",            "Role": "Proposed"},
-    "stu_evol_original":  {"id": "3.1.01", "group_id": "1", "rank_group": "3.Y.01", "environment": "Study Room",  "method": "ES",            "Role": "Baseline"},
+    "stu_evol_1a5m5q":  {"id": "4.1.03", "group_id": "1", "rank_group": "4.Y.03", "environment": "Model A",  "method": "ES",            "Role": r"Proposed (Eq. \ref{eq:proposed})"},
+    "stu_evol_original":  {"id": "3.1.01", "group_id": "1", "rank_group": "3.Y.01", "environment": "Model A",  "method": "ES",            "Role": r"Baseline (Eq. \ref{eq:baseline})"},
 
+    "stu_anne_1a5m5q":  {"id": "4.2.03", "group_id": "2", "rank_group": "4.Y.03", "environment": "Model A",  "method": "SA", "Role": r"Proposed (Eq. \ref{eq:proposed})"},
+    "stu_anne_original":  {"id": "3.2.01", "group_id": "2", "rank_group": "3.Y.01", "environment": "Model A",  "method": "SA", "Role": r"Baseline (Eq. \ref{eq:baseline})"},
 
-    "stu_anne_1a5m5q":  {"id": "4.2.03", "group_id": "2", "rank_group": "4.Y.03", "environment": "Study Room",  "method": "SA", "Role": "Proposed"},
-    "stu_anne_original":  {"id": "3.2.01", "group_id": "2", "rank_group": "3.Y.01", "environment": "Study Room",  "method": "SA", "Role": "Baseline"},
+    "lab_evol_1a5m5q":  {"id": "4.3.03", "group_id": "3", "rank_group": "4.Y.03", "environment": "Model B",  "method": "ES",            "Role": r"Proposed (Eq. \ref{eq:proposed})"},
+    "lab_evol_original":  {"id": "3.3.01", "group_id": "3", "rank_group": "3.Y.01", "environment": "Model B",  "method": "ES",            "Role": r"Baseline (Eq. \ref{eq:baseline})"},
 
-
-    "lab_evol_1a5m5q":  {"id": "4.3.03", "group_id": "3", "rank_group": "4.Y.03", "environment": "Laboratory",  "method": "ES",            "Role": "Proposed"},
-    "lab_evol_original":  {"id": "3.3.01", "group_id": "3", "rank_group": "3.Y.01", "environment": "Laboratory",  "method": "ES",            "Role": "Baseline"},
- 
-
-    "lab_anne_1a5m5q":  {"id": "4.4.03", "group_id": "4", "rank_group": "4.Y.03", "environment": "Laboratory",  "method": "SA", "Role": "Proposed"},
-    "lab_anne_original":  {"id": "3.4.01", "group_id": "4", "rank_group": "3.Y.01", "environment": "Laboratory",  "method": "SA", "Role": "Baseline"},
+    "lab_anne_1a5m5q":  {"id": "4.4.03", "group_id": "4", "rank_group": "4.Y.03", "environment": "Model B",  "method": "SA", "Role": r"Proposed (Eq. \ref{eq:proposed})"},
+    "lab_anne_original":  {"id": "3.4.01", "group_id": "4", "rank_group": "3.Y.01", "environment": "Model B",  "method": "SA", "Role": r"Baseline (Eq. \ref{eq:baseline})"},
 }
 
 # ── Groups ────────────────────────────────────────────────────────────────────
 GROUPS = {
-    "4.Y.03": {"Role": "Proposed"},
-    "3.Y.01": {"Role": "Baseline"},
+    "4.Y.03": {"Role": r"Proposed (Eq. \ref{eq:proposed})"},
+    "3.Y.01": {"Role": r"Baseline (Eq. \ref{eq:baseline})"},
 }
 
 GROUP_PARAMS_COLUMNS = [

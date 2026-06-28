@@ -231,8 +231,10 @@ def run_section(section: str, verbose: bool = True) -> None:
         group_params_columns = getattr(cfg, "GROUP_PARAMS_COLUMNS", None),
         experiments_cfg      = loaded_exp_cfg,
         metrics              = cfg.METRICS,
+        fig_metrics          = cfg.FIG_METRICS,
         robust_comparison_cfg = robust_comparison_cfg,
-        section_type         = meta["type"],    
+        section_type         = meta["type"],   
+        caption_prefix       = cfg.SECTION_META["caption_prefix"],
     )
 
     print(f"\n  Done. All outputs in {out_dir}/")

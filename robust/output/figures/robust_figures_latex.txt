@@ -1,0 +1,17 @@
+\begin{figure*}[!t]
+	\centering		\includegraphics[keepaspectratio,width=18.2cm]{./Figures/robust_analysis.png}
+	\caption[Robust Optimization analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.]{Robust Optimization analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.}
+	\label{fig:robust_analysis}
+\end{figure*}
+
+\begin{figure}[!t]
+	\centering		\includegraphics[keepaspectratio,width=8.89cm]{./Figures/robust_heatmap.png}
+	\caption[Robust Optimization total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.]{Robust Optimization total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.}
+	\label{fig:robust_heatmap}
+\end{figure}
+
+\begin{figure}[!t]
+	\centering		\includegraphics[keepaspectratio,width=8.89cm]{./Figures/robust_bar_chart.png}
+	\caption[Robust Optimization mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.]{Robust Optimization mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.}
+	\label{fig:robust_bar_chart}
+\end{figure}

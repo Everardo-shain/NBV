@@ -1,0 +1,17 @@
+\begin{figure*}[!t]
+	\centering		\includegraphics[keepaspectratio,width=18.2cm]{./Figures/distance_energy_analysis.png}
+	\caption[Distance and energy sub-factors analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.]{Distance and energy sub-factors analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.}
+	\label{fig:distance_energy_analysis}
+\end{figure*}
+
+\begin{figure}[!t]
+	\centering		\includegraphics[keepaspectratio,width=8.89cm]{./Figures/distance_energy_heatmap.png}
+	\caption[Distance and energy sub-factors total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.]{Distance and energy sub-factors total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.}
+	\label{fig:distance_energy_heatmap}
+\end{figure}
+
+\begin{figure}[!t]
+	\centering		\includegraphics[keepaspectratio,width=8.89cm]{./Figures/distance_energy_bar_chart.png}
+	\caption[Distance and energy sub-factors mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.]{Distance and energy sub-factors mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.}
+	\label{fig:distance_energy_bar_chart}
+\end{figure}

@@ -1,0 +1,30 @@
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Robust Optimization Comparison of baseline and proposed objective functions.}
+\label{tab:robust_comparison_comparison}
+\begin{tabular}{@{}llllrrr@{}}
+\hline
+    \textbf{ID} & \textbf{Scene} & \textbf{Method} & $\bm{\mu}$ & \textbf{\thead{Retr.\\ (\%)}} & \textbf{\thead{Acc.\\ Delta}} & $\bm{total_{\text{rank}}}$ \\
+\hline
+    7.1.01 & Model A & ES &  & 85.58 & \textbf{4.256} & 0.069 \\
+    7.1.05 & Model A & ES &  & \textbf{85.92} & 4.469 & \textbf{0} \\
+    \noalign{\smallskip}
+    7.2.01 & Model A & SA &  & \textbf{92.21} & \textbf{11.816} & \textbf{0} \\
+    7.2.05 & Model A & SA &  & 92.21 & 11.816 & 0 \\
+    \noalign{\smallskip}
+    7.3.01 & Model B & ES &  & \textbf{89.41} & 59.790 & \textbf{0} \\
+    7.3.05 & Model B & ES &  & 88.01 & \textbf{22.400} & 0.274 \\
+    \noalign{\smallskip}
+    7.4.01 & Model B & SA &  & \textbf{89.19} & \textbf{12.619} & \textbf{0} \\
+    7.4.05 & Model B & SA &  & 87.73 & 14.833 & 0.286 \\
+
+\hline
+\noalign{\smallskip}
+    \multicolumn{5}{@{}l}{Aggregated Performance} & $n_s/{4}$ & $\text{group}_{\text{rank}}$ \\
+\hline
+    \multicolumn{5}{@{}l}{\textbf{Baseline}} & \textbf{4} & \textbf{\underline{0.017}} \\
+    \multicolumn{5}{@{}l}{Proposed} & 4 & 0.140 \\
+\hline
+\end{tabular}
+\end{table}

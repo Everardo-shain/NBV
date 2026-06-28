@@ -9,6 +9,9 @@ Figure outputs
 --------------
   figures/
     {prefix}_analysis.png       (Combined Heatmap + Bar chart)
+    {prefix}_heatmap.png        (Heatmap only)
+    {prefix}_bar_chart.png      (Bar chart only)
+    {prefix}_figures_latex.txt  (LaTeX includegraphics snippets for the 3 figures above)
     comparison_grid/
       {prefix}_{group_id}_comparison_grid.png   one per group_id (scene+method)
 """
@@ -204,37 +207,14 @@ def save_comparison_grids(
             _save(fig, grid_dir / f"{prefix}_{safe_gid}_comparison_grid.png")
 
 
-# ── Combined Grouped Analysis (Heatmap + Bar Chart) ───────────────────────────
+# ── Shared data prep for heatmap / bar chart ──────────────────────────────────
 
-def save_combined_grouped_analysis(
-    ranked_df, grouped_df, groups_cfg, group_params_columns,
-    output_dir, prefix, title=""
-):
-    """
-    Creates a single, full-width figure containing both the heatmap (a)
-    and the grouped bar chart (b), adhering to IEEE formatting standards.
-    """
-    if groups_cfg is None or grouped_df is None:
-        return
-
+def _prepare_heatmap_data(ranked_df, grouped_df, groups_cfg):
+    """Compute the matrix, masks, and labels shared by the heatmap panel."""
     rank_col = "rank_group" if "rank_group" in ranked_df.columns else "group_id"
     if rank_col not in ranked_df.columns:
-        return
+        return None
 
-    # Full page width IEEE Access (two-column span) -> ~7.16 inches.
-    fig = plt.figure(figsize=(7.16, 2.3))
-    
-    # GridSpec used to make the bar chart wider than the heatmap (ratios 1 to 2.0)
-    gs = plt.GridSpec(1, 2, figure=fig, width_ratios=[1.0, 2.0])
-    ax_heat = fig.add_subplot(gs[0, 0])
-    ax_bar  = fig.add_subplot(gs[0, 1])
-    
-    # Common parameter string for axes
-    params_str = ", ".join(h for _, h in group_params_columns)
-
-    # ==========================================================
-    # 1. Heatmap (Left Panel - ax_heat)
-    # ==========================================================
     group_ids_present = sorted(
         ranked_df["group_id"].unique(),
         key=lambda x: [int(p) for p in str(x).split(".")],
@@ -254,57 +234,62 @@ def save_combined_grouped_analysis(
                                      if "is_valid" in match.columns else False
 
     col_labels = [str(g) for g in group_ids_present]
+    return {
+        "rank_col":          rank_col,
+        "group_ids_present": group_ids_present,
+        "rank_group_ids":    rank_group_ids,
+        "matrix":            matrix,
+        "invalid_mask":      invalid_mask,
+        "col_labels":        col_labels,
+    }
+
+
+def _draw_heatmap(ax, data):
+    """Draw the heatmap panel (a) onto the given axis. Returns the imshow handle."""
+    matrix         = data["matrix"]
+    invalid_mask   = data["invalid_mask"]
+    col_labels     = data["col_labels"]
+    rank_group_ids = data["rank_group_ids"]
 
     display_matrix = np.where(invalid_mask, np.nan, matrix)
     vmin = np.nanmin(matrix) if not np.all(np.isnan(display_matrix)) else 0
     vmax = np.nanmax(matrix) if not np.all(np.isnan(display_matrix)) else 1
-    
-    im = ax_heat.imshow(display_matrix, aspect="auto", cmap="viridis_r", vmin=vmin, vmax=vmax)
+
+    im = ax.imshow(display_matrix, aspect="auto", cmap="viridis_r", vmin=vmin, vmax=vmax)
 
     if invalid_mask.any():
         grey = np.where(invalid_mask, 1.0, np.nan)
         cmap_grey = matplotlib.colors.ListedColormap([COLOR_INVALID])
-        ax_heat.imshow(grey, aspect="auto", cmap=cmap_grey, vmin=0, vmax=1, alpha=0.6)
+        ax.imshow(grey, aspect="auto", cmap=cmap_grey, vmin=0, vmax=1, alpha=0.6)
 
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
             val = matrix[i, j]
             if np.isnan(val):
-                ax_heat.text(j, i, "--", ha="center", va="center", fontsize=6.5)
+                ax.text(j, i, "--", ha="center", va="center", fontsize=6.5)
             else:
                 text     = f"({val:.1f})" if invalid_mask[i, j] else f"{val:.1f}"
                 norm_val = (val - vmin) / (vmax - vmin + 1e-9)
                 color    = "black" if (norm_val < 0.6 or invalid_mask[i, j]) else "white"
-                ax_heat.text(j, i, text, ha="center", va="center", fontsize=6.5, color=color)
+                ax.text(j, i, text, ha="center", va="center", fontsize=6.5, color=color)
 
-    ax_heat.set_xticks(range(len(col_labels)))
-    ax_heat.set_xticklabels(col_labels, fontsize=7, rotation=30, ha="right")
-    ax_heat.set_yticks(range(len(rank_group_ids)))
-    ax_heat.set_yticklabels(rank_group_ids, fontsize=7)
-    
-    # labelpad garantiza que el nombre del eje baje lo suficiente y no choque con los números rotados
-    ax_heat.set_xlabel("Scene–method configurations", fontsize=8, labelpad=3)
-    ax_heat.set_ylabel("Parametric variations", fontsize=8)
+    ax.set_xticks(range(len(col_labels)))
+    ax.set_xticklabels(col_labels, fontsize=7, rotation=30, ha="right")
+    ax.set_yticks(range(len(rank_group_ids)))
+    ax.set_yticklabels(rank_group_ids, fontsize=7)
 
-    # Colorbar attached to heatmap
-    cbar = plt.colorbar(im, ax=ax_heat, shrink=0.8, pad=0.04)
-    cbar.set_label(r"Total rank ($\text{total}_{\text{rank}}$)", fontsize=8)
-    cbar.ax.tick_params(labelsize=7)
+    ax.set_xlabel("Scene–method configurations", fontsize=8, labelpad=3)
+    ax.set_ylabel("Parametric variations", fontsize=8)
 
-    # RE-ALINEACIÓN INFERIOR (Left Panel): Leyenda bajada a -0.32 y subfigura a -0.52
-    legend_handles_heat = [
-        mpatches.Patch(facecolor=COLOR_INVALID, alpha=0.6, label="Invalid — below threshold"),
-    ]
-    ax_heat.legend(handles=legend_handles_heat, loc="upper center",
-                   bbox_to_anchor=(0.5, -0.32), ncol=1, framealpha=0.9, fontsize=7)
-    
-    ax_heat.text(0.5, -0.52, "(a) Total rank distribution", transform=ax_heat.transAxes, 
-                 ha="center", va="top", fontsize=8, weight="bold")
+    return im
 
 
-    # ==========================================================
-    # 2. Bar Chart (Right Panel - ax_bar)
-    # ==========================================================
+def _prepare_bar_data(ranked_df, grouped_df, groups_cfg):
+    """Compute means/stds/colors/hatches shared by the bar chart panel."""
+    rank_col = "rank_group" if "rank_group" in ranked_df.columns else "group_id"
+    if rank_col not in ranked_df.columns:
+        return None
+
     n_total = 4
     labels, means, stds, success_counts = [], [], [], []
     for gid, gdata in groups_cfg.items():
@@ -319,76 +304,237 @@ def save_combined_grouped_analysis(
             int(match["success_count"].values[0]) if "success_count" in match.columns else n_total
         )
 
-    if means:
-        max_ns = max(success_counts) if success_counts else n_total
-        if "success_count" in grouped_df.columns:
-            sorted_winner = grouped_df.sort_values(["success_count", "totalrank"], ascending=[False, True])
-            winner_id = sorted_winner.iloc[0]["experiment_id"] if not sorted_winner.empty else None
-        else:
-            winner_id = grouped_df.sort_values("totalrank").iloc[0]["experiment_id"] if not grouped_df.empty else None
+    if not means:
+        return None
 
-        colors  = [COLOR_BEST if lb == winner_id else COLOR_DEFAULT for lb in labels]
-        hatches = ["///" if sc < max_ns else "" for sc in success_counts]
+    max_ns = max(success_counts) if success_counts else n_total
+    if "success_count" in grouped_df.columns:
+        sorted_winner = grouped_df.sort_values(["success_count", "totalrank"], ascending=[False, True])
+        winner_id = sorted_winner.iloc[0]["experiment_id"] if not sorted_winner.empty else None
+    else:
+        winner_id = grouped_df.sort_values("totalrank").iloc[0]["experiment_id"] if not grouped_df.empty else None
 
-        x = np.arange(len(labels))
-        
-        for i, (m, s, c, h) in enumerate(zip(means, stds, colors, hatches)):
-            is_zero = np.isnan(m) or m == 0
-            bar_height = 0.01 if is_zero else m
-            bar_std = 0.0 if is_zero else s
-            alpha_val = 0.0 if is_zero else 1.0
-            edge_c = "none" if is_zero else "black"
-            
-            ax_bar.bar(x[i], bar_height, yerr=bar_std, capsize=4 if not is_zero else 0,
-                       color=c, edgecolor=edge_c, linewidth=0.6, hatch=h, alpha=alpha_val,
-                       error_kw={"elinewidth": 1.0, "ecolor": "black"})
+    colors  = [COLOR_BEST if lb == winner_id else COLOR_DEFAULT for lb in labels]
+    hatches = ["///" if sc < max_ns else "" for sc in success_counts]
 
-        max_mean_val = max(means) if any(~np.isnan(means)) else 10.0
-        
-        for i, (m, s, ns) in enumerate(zip(means, stds, success_counts)):
-            mean_val = 0.0 if (np.isnan(m) or m == 0) else m
-            std_val = 0.0 if np.isnan(s) else s
-            
-            # SOLUCIÓN TEXTO ROJO: Modificado y_pos base para empujar los textos en cero 
-            # un poco más arriba y evitar que pisen la línea negra del eje
-            txt = f"{mean_val:.2f}\n({ns}/{n_total})"
-            y_pos = max_mean_val * 0.06 if mean_val == 0 else mean_val + std_val + max_mean_val * 0.02
-            ax_bar.text(x[i], y_pos, txt, ha="center", va="bottom", fontsize=6.5, 
-                        color="black" if mean_val > 0 else "darkred")
+    return {
+        "n_total":         n_total,
+        "labels":          labels,
+        "means":           means,
+        "stds":            stds,
+        "success_counts":  success_counts,
+        "max_ns":          max_ns,
+        "winner_id":       winner_id,
+        "colors":          colors,
+        "hatches":         hatches,
+    }
 
-        ax_bar.set_xticks(x)
-        # El mapeo de rotación ahora coincide exactamente con el del Heatmap
-        ax_bar.set_xticklabels(labels, fontsize=7, rotation=30, ha="right")
-        
-        # labelpad agregado para empujar de forma idéntica el título del eje X
-        ax_bar.set_xlabel("Parametric variations", fontsize=8, labelpad=3)
-        ax_bar.set_ylabel(r"Group rank ($\text{group}_{\text{rank}}$)", fontsize=8)
-        ax_bar.grid(axis="y", linestyle="--", alpha=0.4)
-        ax_bar.set_ylim(0, max(m + s for m, s in zip(means, stds)) * 1.35)
 
-        # RE-ALINEACIÓN INFERIOR (Right Panel): Sincronizado exactamente con el panel izquierdo
+def _draw_bar_chart(ax, data, font_scale=1.0):
+    """Draw the grouped bar chart panel (b) onto the given axis.
+
+    font_scale multiplies all font sizes in this panel (tick labels, axis
+    labels, and bar annotations) uniformly — use >1.0 for standalone figures
+    where more room is available than in the combined multipanel figure.
+    """
+    n_total        = data["n_total"]
+    labels         = data["labels"]
+    means          = data["means"]
+    stds           = data["stds"]
+    success_counts = data["success_counts"]
+    colors         = data["colors"]
+    hatches        = data["hatches"]
+
+    x = np.arange(len(labels))
+
+    for i, (m, s, c, h) in enumerate(zip(means, stds, colors, hatches)):
+        is_zero = np.isnan(m) or m == 0
+        bar_height = 0.01 if is_zero else m
+        bar_std = 0.0 if is_zero else s
+        alpha_val = 0.0 if is_zero else 1.0
+        edge_c = "none" if is_zero else "black"
+
+        ax.bar(x[i], bar_height, yerr=bar_std, capsize=4 if not is_zero else 0,
+               color=c, edgecolor=edge_c, linewidth=0.6, hatch=h, alpha=alpha_val,
+               error_kw={"elinewidth": 1.0, "ecolor": "black"})
+
+    max_mean_val = max(means) if any(~np.isnan(means)) else 10.0
+
+    for i, (m, s, ns) in enumerate(zip(means, stds, success_counts)):
+        mean_val = 0.0 if (np.isnan(m) or m == 0) else m
+        std_val = 0.0 if np.isnan(s) else s
+
+        txt = f"{mean_val:.2f}\n({ns}/{n_total})"
+        y_pos = max_mean_val * 0.06 if mean_val == 0 else mean_val + std_val + max_mean_val * 0.02
+        ax.text(x[i], y_pos, txt, ha="center", va="bottom", fontsize=6.5 * font_scale,
+                color="black" if mean_val > 0 else "darkred")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=7 * font_scale, rotation=30, ha="right")
+    ax.tick_params(axis="y", labelsize=7 * font_scale)
+
+    ax.set_xlabel("Parametric variations", fontsize=8 * font_scale, labelpad=3)
+    ax.set_ylabel(r"Group rank ($\text{group}_{\text{rank}}$)", fontsize=8 * font_scale)
+    ax.grid(axis="y", linestyle="--", alpha=0.4)
+    ax.set_ylim(0, max(m + s for m, s in zip(means, stds)) * 1.35)
+
+    return hatches
+
+
+# ── Combined Grouped Analysis (Heatmap + Bar Chart) ───────────────────────────
+
+def save_combined_grouped_analysis(
+    ranked_df, grouped_df, groups_cfg, group_params_columns,
+    output_dir, prefix, title=""
+):
+    """
+    Creates a single, full-width figure containing both the heatmap (a)
+    and the grouped bar chart (b), adhering to IEEE formatting standards.
+    """
+    if groups_cfg is None or grouped_df is None:
+        return
+
+    heat_data = _prepare_heatmap_data(ranked_df, grouped_df, groups_cfg)
+    bar_data  = _prepare_bar_data(ranked_df, grouped_df, groups_cfg)
+    if heat_data is None:
+        return
+
+    # Full page width IEEE Access (two-column span) -> ~7.16 inches.
+    fig = plt.figure(figsize=(7.16, 2.3))
+
+    # GridSpec used to make the bar chart wider than the heatmap (ratios 1 to 2.0)
+    gs = plt.GridSpec(1, 2, figure=fig, width_ratios=[1.0, 2.0])
+    ax_heat = fig.add_subplot(gs[0, 0])
+    ax_bar  = fig.add_subplot(gs[0, 1])
+
+    # ==========================================================
+    # 1. Heatmap (Left Panel - ax_heat)
+    # ==========================================================
+    im = _draw_heatmap(ax_heat, heat_data)
+
+    # Colorbar attached to heatmap
+    cbar = plt.colorbar(im, ax=ax_heat, shrink=0.8, pad=0.04)
+    cbar.set_label(r"Total rank ($\text{total}_{\text{rank}}$)", fontsize=8)
+    cbar.ax.tick_params(labelsize=7)
+
+    # RE-ALINEACIÓN INFERIOR (Left Panel): Leyenda bajada a -0.32 y subfigura a -0.52
+    legend_handles_heat = [
+        mpatches.Patch(facecolor=COLOR_INVALID, alpha=0.6, label="Invalid — below threshold"),
+    ]
+    ax_heat.legend(handles=legend_handles_heat, loc="upper center",
+                   bbox_to_anchor=(0.5, -0.32), ncol=1, framealpha=0.9, fontsize=7)
+
+    ax_heat.text(0.5, -0.52, "(a) Total rank distribution", transform=ax_heat.transAxes,
+                 ha="center", va="top", fontsize=8, weight="bold")
+
+    # ==========================================================
+    # 2. Bar Chart (Right Panel - ax_bar)
+    # ==========================================================
+    if bar_data is not None:
+        hatches = _draw_bar_chart(ax_bar, bar_data)
+
         legend_handles_bar = [
             mpatches.Patch(color=COLOR_BEST,    label="Winner"),
             mpatches.Patch(color=COLOR_DEFAULT, label="Other groups"),
         ]
         if any(h for h in hatches):
             legend_handles_bar.append(
-                mpatches.Patch(facecolor="white", edgecolor="black", hatch="///", 
-                               label=f"$n_s < {max_ns}$ (excluded)")
+                mpatches.Patch(facecolor="white", edgecolor="black", hatch="///",
+                               label=f"$n_s < {bar_data['max_ns']}$ (excluded)")
             )
-        
+
         ax_bar.legend(handles=legend_handles_bar, loc="upper center",
                     bbox_to_anchor=(0.5, -0.32), ncol=len(legend_handles_bar),
                     framealpha=0.9, fontsize=7)
 
-        ax_bar.text(0.5, -0.52, "(b) Mean performance comparison", transform=ax_bar.transAxes, 
+        ax_bar.text(0.5, -0.52, "(b) Mean performance comparison", transform=ax_bar.transAxes,
                     ha="center", va="top", fontsize=8, weight="bold")
 
     # Modificado el espacio inferior relativo (bottom=0.30) para acomodar los nuevos márgenes sin recortes
     fig.subplots_adjust(bottom=0.30, wspace=0.35, top=0.94, left=0.08, right=0.96)
-    
+
     # Save the combined figure
     _save(fig, output_dir / "figures" / f"{prefix}_analysis.png")
+
+
+# ── Individual Heatmap Figure ─────────────────────────────────────────────────
+
+def save_heatmap_figure(
+    ranked_df, grouped_df, groups_cfg, group_params_columns,
+    output_dir, prefix, title=""
+):
+    """
+    Creates a standalone figure with just the heatmap panel (no "(a)" label,
+    since it is no longer part of a multipanel figure), same styling as the
+    combined figure's left panel.
+    """
+    if groups_cfg is None or grouped_df is None:
+        return
+
+    heat_data = _prepare_heatmap_data(ranked_df, grouped_df, groups_cfg)
+    if heat_data is None:
+        return
+
+    fig, ax_heat = plt.subplots(figsize=(3.4, 2.6))
+
+    im = _draw_heatmap(ax_heat, heat_data)
+
+    cbar = plt.colorbar(im, ax=ax_heat, shrink=0.8, pad=0.04)
+    cbar.set_label(r"Total rank ($\text{total}_{\text{rank}}$)", fontsize=8)
+    cbar.ax.tick_params(labelsize=7)
+
+    legend_handles_heat = [
+        mpatches.Patch(facecolor=COLOR_INVALID, alpha=0.6, label="Invalid — below threshold"),
+    ]
+    ax_heat.legend(handles=legend_handles_heat, loc="upper center",
+                   bbox_to_anchor=(0.5, -0.30), ncol=1, framealpha=0.9, fontsize=7)
+
+    fig.subplots_adjust(bottom=0.32, top=0.96, left=0.18, right=0.92)
+
+    _save(fig, output_dir / "figures" / f"{prefix}_heatmap.png")
+
+
+# ── Individual Bar Chart Figure ───────────────────────────────────────────────
+
+def save_bar_chart_figure(
+    ranked_df, grouped_df, groups_cfg, group_params_columns,
+    output_dir, prefix, title="",
+    font_scale=1.3,
+):
+    """
+    Creates a standalone figure with just the grouped bar chart panel (no "(b)"
+    label), same styling as the combined figure's right panel, but with larger
+    text (font_scale) since a standalone figure has more room to breathe than
+    a panel in the combined multipanel figure.
+    """
+    if groups_cfg is None or grouped_df is None:
+        return
+
+    bar_data = _prepare_bar_data(ranked_df, grouped_df, groups_cfg)
+    if bar_data is None:
+        return
+
+    fig, ax_bar = plt.subplots(figsize=(5.2, 2.6))
+
+    hatches = _draw_bar_chart(ax_bar, bar_data, font_scale=font_scale)
+
+    legend_handles_bar = [
+        mpatches.Patch(color=COLOR_BEST,    label="Winner"),
+        mpatches.Patch(color=COLOR_DEFAULT, label="Other groups"),
+    ]
+    if any(h for h in hatches):
+        legend_handles_bar.append(
+            mpatches.Patch(facecolor="white", edgecolor="black", hatch="///",
+                           label=f"$n_s < {bar_data['max_ns']}$ (excluded)")
+        )
+
+    ax_bar.legend(handles=legend_handles_bar, loc="upper center",
+                bbox_to_anchor=(0.5, -0.30), ncol=len(legend_handles_bar),
+                framealpha=0.9, fontsize=7 * font_scale)
+
+    fig.subplots_adjust(bottom=0.32, top=0.96, left=0.12, right=0.96)
+
+    _save(fig, output_dir / "figures" / f"{prefix}_bar_chart.png")
 
 
 # ── Delta f comparison figure (robust_comparison section only) ────────────────
@@ -497,15 +643,87 @@ def save_delta_f_comparison_figure(
     fig.tight_layout()
     _save(fig, output_dir / "figures" / f"{prefix}_delta_f_comparison.png")
 
+# ── LaTeX snippet generation ───────────────────────────────────────────────────
+
+def _figure_latex_block(img_path, caption, label, two_col=True, width=None):
+    env = "figure*" if two_col else "figure"
+    if width is None:
+        width = "18.2cm" if two_col else "8.89cm"
+    return (
+        rf"\begin{{{env}}}[!t]" "\n"
+        r"	\centering		\includegraphics[keepaspectratio,width=" + width + rf"]{{{img_path}}}" "\n"
+        rf"	\caption[{caption}]{{{caption}}}" "\n"
+        rf"	\label{{{label}}}" "\n"
+        rf"\end{{{env}}}"
+    )
+
+
+def save_figures_latex_snippet(
+    output_dir, prefix, caption_prefix,
+    two_col=True,
+    width=None,
+):
+    """
+    Writes {prefix}_figures_latex.txt inside the figures/ folder, containing
+    the \\includegraphics blocks for the combined analysis, heatmap, and bar
+    chart figures, ready to paste into the paper.
+
+    caption_prefix (e.g. "Area factor") is used to build each caption, e.g.
+    "Area factor analysis.", "Area factor total rank distribution.",
+    "Area factor mean performance comparison."
+
+    width defaults to "18.2cm" for two_col=True (figure*, full page width —
+    IEEE two-column spec: 7.16 in / 182 mm / 43 picas) and "8.89cm" for
+    two_col=False (figure, single column — IEEE one-column spec: 3.5 in /
+    88.9 mm / 21 picas).
+    """
+
+
+    figures_dir = output_dir / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    blocks = [
+        _figure_latex_block(
+            img_path=f"./Figures/{prefix}_analysis.png",
+            caption=f"{caption_prefix} analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.",
+            label=f"fig:{prefix}_analysis",
+            two_col=True,
+            width=None,
+        ),
+        _figure_latex_block(
+            img_path=f"./Figures/{prefix}_heatmap.png",
+            caption=f"{caption_prefix} total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.",
+            label=f"fig:{prefix}_heatmap",
+            two_col=False,
+            width=None,
+        ),
+        _figure_latex_block(
+            img_path=f"./Figures/{prefix}_bar_chart.png",
+            caption=f"{caption_prefix} mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.",
+            label=f"fig:{prefix}_bar_chart",
+            two_col=False,
+            width=None,
+        ),
+    ]
+
+    content = "\n\n".join(blocks) + "\n"
+    out_path = figures_dir / f"{prefix}_figures_latex.txt"
+    out_path.write_text(content, encoding="utf-8")
+    print(f"  LaTeX snippet -> {out_path}")
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def save_all_figures(
     experiments, ranked_df, output_dir, prefix,
     scene_name="", groups_cfg=None, grouped_df=None,
     group_params_columns=None, experiments_cfg=None,
-    metrics=None,
-    robust_comparison_cfg=None, 
+    metrics=None, fig_metrics=None,
+    robust_comparison_cfg=None,
     section_type="standard",
+    caption_prefix="",
+    figures_two_col=True,
+    figures_width=None,
 ):
     figures_dir = output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
@@ -515,7 +733,7 @@ def save_all_figures(
         if experiments_cfg:
             save_comparison_grids(
                 experiments, ranked_df, experiments_cfg,
-                output_dir, prefix, scene_name, metrics=metrics,
+                output_dir, prefix, scene_name, metrics=fig_metrics,
                 group_params_columns=group_params_columns,
             )
     elif section_type == "standard":
@@ -529,6 +747,32 @@ def save_all_figures(
                 output_dir=output_dir,
                 prefix=prefix,
                 title=scene_name
+            )
+            # Also generate the two panels as standalone figures
+            save_heatmap_figure(
+                ranked_df=ranked_df,
+                grouped_df=grouped_df,
+                groups_cfg=groups_cfg,
+                group_params_columns=group_params_columns,
+                output_dir=output_dir,
+                prefix=prefix,
+                title=scene_name
+            )
+            save_bar_chart_figure(
+                ranked_df=ranked_df,
+                grouped_df=grouped_df,
+                groups_cfg=groups_cfg,
+                group_params_columns=group_params_columns,
+                output_dir=output_dir,
+                prefix=prefix,
+                title=scene_name
+            )
+            save_figures_latex_snippet(
+                output_dir=output_dir,
+                prefix=prefix,
+                caption_prefix=caption_prefix or prefix,
+                two_col=figures_two_col,
+                width=figures_width,
             )
 
         # ── Delta f comparison (robust_comparison section only) ───────────────────

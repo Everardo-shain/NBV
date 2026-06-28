@@ -2,28 +2,43 @@ from pathlib import Path
 from sys import prefix
 from wsgiref import headers
 import pandas as pd
-
+import re
 
 # ── Full column registry ──────────────────────────────────────────────────────
 # metric_key → (results_col, results_header, results_hib,
 #               rank_col,    rank_header,    rank_hib,    alignment)
 _METRIC_REGISTRY = {
+
     "distance":  ("acc_dist_m",    r"\thead{Acc.\\ dist. (m)}", False,
+
                   "drank",         r"$d_{\text{rank}}$",        False, "r"),
+
     "energy":    ("acc_energy",    r"\thead{Acc.\\ energy}",    False,
+
                   "erank",         r"$e_{\text{rank}}$",        False, "r"),
-    "retrieved": ("pct_retrieved", r"\thead{Retr.\\ (m)}",           True,
-                  "retrrank",      r"$r_{\text{rank}}$",     False, "r"),
+
+    "retrieved": ("pct_retrieved", r"\thead{Retr.\\ (\%)}",     True,
+
+                  "retrrank",      r"$r_{\text{rank}}$",        False, "r"),
+
     "quality":   ("mean_quality",  r"\thead{Mean\\ quality}",   True,
+
                   "qrank",         r"$q_{\text{rank}}$",        False, "r"),
+
     "time":      ("total_time_s",  r"\thead{Time\\ (s)}",       False,
-                  "timerank",      r"$t_{\text{rank}}$",     False, "r"),
+
+                  "timerank",      r"$t_{\text{rank}}$",        False, "r"),
+
     "delta_f":   ("acc_delta_f",   r"\thead{Acc.\\ $\Delta f$}",False,
+
                   None,            None,                        False, "r"),
+
 }
 
+
+
 # "totalrank" is always the last rank column
-_TOTALRANK_HDR = (r"$total_{\text{rank}}$", False, "r")
+_TOTALRANK_HDR = (r"$\text{total}_{\text{rank}}$", False, "r")
 
 HIGH_PRECISION_COLS = {"mean_quality", "tri_quality", "acc_delta_f"}
 
@@ -53,7 +68,37 @@ def _fmt(v, dec=2):
 
 
 def _italic(s):  return r"\textit{" + s + "}"
-def _bold(s):    return r"\textbf{" + s + "}"
+
+
+def _bold(s):
+    # 1. LIMPIEZA INICIAL: Si la cadena contiene "rank", la estandarizamos
+    if "rank" in s:
+        # Removemos la sintaxis vieja de LaTeX para extraer el texto limpio
+        s_clean = s.replace("$", "").replace(r"\bm", "").replace(r"\text", "")
+        s_clean = s_clean.replace("{", "").replace("}", "").strip()
+        
+        if "_" in s_clean:
+            base = s_clean.split("_")[0].strip()
+            
+            # Si la base es "total", envolvemos en $...$ usando \textbf para un negro intenso
+            if base == "total":
+                return r"$\textbf{total}_{\textbf{rank}}$"
+            
+            # Si es una letra individual (d, e, r, q, t), combinamos \bm y \textbf
+            elif len(base) == 1:
+                return rf"$\bm{{{base}}}_{{\textbf{{rank}}}}$"
+
+    # 2. CASO ESTÁNDAR: Si es una fórmula matemática pura de principio a fin: $...$
+    if s.startswith("$") and s.endswith("$"):
+        content = s[1:-1]
+        return r"$\bm{" + content + "}$"
+    
+    # 3. CASO MIXTO: Si la cadena contiene una mezcla de texto y fórmulas general
+    if "$" in s:
+        return re.sub(r'\$(.*?)\$', r'$\\\bm{\1}$', s)
+    
+    # 4. CASO TEXTO: Si es texto común y corriente sin matemáticas (como "ID")
+    return r"\textbf{" + s + "}"
 
 
 def _parse_id(x):
@@ -114,7 +159,7 @@ def _to_latex(fmt_df, cols, col_aligns, headers,
     body = "\n    ".join(rows)
 
     return (
-        rf"\begin{{{table_env}}}[ht]" "\n"
+        rf"\begin{{{table_env}}}[!t]" "\n"
         r"\centering" "\n"
         r"\footnotesize" "\n"
         rf"\caption{{{caption}}}" "\n"
@@ -251,7 +296,7 @@ def params_table(experiments_cfg, params_columns, caption, label, note=None):
     note_tex = f"\n\\vspace{{2pt}}\n\\raggedright\\footnotesize {note}" if note else ""
 
     return (
-        r"\begin{table}[ht]" "\n"
+        r"\begin{table}[!t]" "\n"
         r"\centering" "\n"
         r"\footnotesize" "\n"
         rf"\caption{{{caption}}}" "\n"
@@ -281,7 +326,7 @@ def grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
     param_col_hdrs = {
         "id":            "ID",
         "success_count": rf"$n_s/{n_total}$",
-        "totalrank":     r"$\text{group}_{\text{rank}}$",
+        "totalrank":     r"$\textbf{group}_{\textbf{rank}}$",
         **{k: h for k, h in group_params_columns},
     }
     param_aligns = (["l"] * (1 + len(group_params_columns)) + ["c", "r"])
@@ -335,7 +380,7 @@ def grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
 
     body = "\n    ".join(rows)
     return (
-        r"\begin{table}[ht]" "\n"
+        r"\begin{table}[!t]" "\n"
         r"\centering" "\n"
         r"\footnotesize" "\n"
         rf"\caption{{{caption}}}" "\n"
@@ -360,7 +405,6 @@ def robust_comparison_table(
     Side-by-side comparison table for all mu values.
     Columns: mu | n_s/4 | totalrank | acc_delta_f | delta_f improvement % | Selected
     """
-    # Get baseline delta_f from grouped_df
     baseline_row = grouped_df[grouped_df["experiment_id"] == baseline_rg]
     baseline_df  = float(baseline_row["acc_delta_f"].values[0]) \
                    if not baseline_row.empty and "acc_delta_f" in baseline_row.columns \
@@ -370,7 +414,6 @@ def robust_comparison_table(
 
     n_total = 4
 
-    # ── Sort grouped_df by experiment_id in natural mu order ─────────────
     def _sort_key(eid):
         parts = str(eid).replace("Y", "0").split(".")
         try:
@@ -461,7 +504,7 @@ def robust_comparison_table(
     body = "\n".join(rows)
 
     return (
-        r"\begin{table}[ht]" "\n"
+        r"\begin{table}[!t]" "\n"
         r"\centering" "\n"
         r"\footnotesize" "\n"
         rf"\caption{{{caption}}}" "\n"
@@ -476,6 +519,441 @@ def robust_comparison_table(
         r"\end{table}"
     )
 
+
+# ── Full summary table (params + results + all ranks, no grouping) ───────────
+
+def full_summary_table(
+    summary_df, ranked_df,
+    experiments_cfg, group_params_columns,
+    params_columns, metrics,
+    caption, label,
+    two_col=False,
+):
+    """
+    Flat table combining params, result cols, individual rank cols, and totalrank.
+    No group_id grouping or separators.
+
+    Columns: ID | PARAMS_COLUMNS | METRICS result cols | rank cols | totalrank
+
+    Formatting (all global, excluding invalid rows):
+    - Italic: rows where is_valid == False
+    - Bold: global winner of each result col, each rank col, and totalrank
+    - Underline on all PARAMS_COLUMNS cells of the row where totalrank is bold
+    """
+    active    = _active_metrics(metrics)
+    has_valid = "is_valid" in summary_df.columns
+    grp_param_keys = [k for k, _ in group_params_columns]
+
+    # ── Build per-experiment lookup from experiments_cfg ─────────────────────
+    exp_lookup = {cfg.get("id", ekey): cfg for ekey, cfg in experiments_cfg.items()}
+
+    # ── Merge summary_df with ranked_df ──────────────────────────────────────
+    df = summary_df.copy()
+
+    # Attach rank cols and totalrank from ranked_df if not already present
+    rank_cols_needed = (
+        [_METRIC_REGISTRY[m][3] for m in active if _METRIC_REGISTRY[m][3] is not None]
+        + ["totalrank"]
+    )
+    if ranked_df is not None:
+        rk = ranked_df.set_index("experiment_id")
+        for col in rank_cols_needed:
+            if col not in df.columns and col in rk.columns:
+                df[col] = df["experiment_id"].map(rk[col])
+
+    # Attach params from experiments_cfg (always overwrite to use config values,
+    # not raw log values that may differ e.g. "Evolution Strategy" vs "ES")
+    for pk in grp_param_keys:
+        df[pk] = df["experiment_id"].apply(
+            lambda eid, k=pk: exp_lookup.get(eid, {}).get(k, "")
+        )
+
+    # ── Sort by experiment_id ─────────────────────────────────────────────────
+    df = _sort_by_id(df)
+
+    # ── Identify global winners (excluding invalid rows) ──────────────────────
+    valid_df  = df[df["is_valid"] == True] if has_valid else df
+    winner_idx = {}  # col → df index of winner
+
+    for mkey in active:
+        res_col, _, hib, rank_col, _, rank_hib, _ = _METRIC_REGISTRY[mkey]
+        if res_col in df.columns and not valid_df.empty:
+            s = valid_df[res_col].astype(float)
+            winner_idx[res_col] = s.idxmax() if hib else s.idxmin()
+        if rank_col and rank_col in df.columns and not valid_df.empty:
+            s = valid_df[rank_col].astype(float)
+            winner_idx[rank_col] = s.idxmax() if rank_hib else s.idxmin()
+
+    if "totalrank" in df.columns and not valid_df.empty:
+        s = valid_df["totalrank"].astype(float)
+        winner_idx["totalrank"] = s.idxmin()
+
+    totalrank_winner_idx = winner_idx.get("totalrank")
+
+    # ── Column order ──────────────────────────────────────────────────────────
+    res_cols  = [_METRIC_REGISTRY[m][0] for m in active if _METRIC_REGISTRY[m][0] in df.columns]
+    rank_cols = [_METRIC_REGISTRY[m][3] for m in active
+                 if _METRIC_REGISTRY[m][3] is not None and _METRIC_REGISTRY[m][3] in df.columns]
+    all_cols  = ["experiment_id"] + grp_param_keys + res_cols + rank_cols + ["totalrank"]
+    all_cols  = [c for c in all_cols if c in df.columns or c == "experiment_id"]
+
+    col_headers = {
+        "experiment_id": "ID",
+        "totalrank":     _TOTALRANK_HDR[0],
+        **{k: h for k, h in group_params_columns},
+        **{_METRIC_REGISTRY[m][0]: _METRIC_REGISTRY[m][1] for m in active},
+        **{_METRIC_REGISTRY[m][3]: _METRIC_REGISTRY[m][4]
+           for m in active if _METRIC_REGISTRY[m][3] is not None},
+    }
+    col_align_map = {
+        "experiment_id": "l",
+        "totalrank":     "r",
+        **{k: "l" for k in grp_param_keys},
+        **{_METRIC_REGISTRY[m][0]: _METRIC_REGISTRY[m][6] for m in active},
+        **{_METRIC_REGISTRY[m][3]: _METRIC_REGISTRY[m][6]
+           for m in active if _METRIC_REGISTRY[m][3] is not None},
+    }
+
+    spec       = "@{}" + "".join(col_align_map.get(c, "r") for c in all_cols) + "@{}"
+    header_row = " & ".join(_bold(col_headers.get(c, c)) for c in all_cols) + r" \\"
+    table_env  = "table*" if two_col else "table"
+
+    # ── Build rows ────────────────────────────────────────────────────────────
+    rows = []
+    for idx, row in df.iterrows():
+        invalid  = has_valid and (row.get("is_valid") == False)
+        is_tr_winner = (idx == totalrank_winner_idx)
+
+        cells = []
+        for c in all_cols:
+            if c == "experiment_id":
+                cells.append(str(row.get("experiment_id", "")))
+                continue
+
+            # PARAMS_COLUMNS: underline if this row wins totalrank
+            if c in grp_param_keys:
+                val = str(row.get(c, ""))
+                if is_tr_winner:
+                    val = r"\underline{" + val + "}"
+                cells.append(val)
+                continue
+
+            # Result cols
+            if c in res_cols:
+                mkey   = next(m for m in active if _METRIC_REGISTRY[m][0] == c)
+                _, _, hib, _, _, _, _ = _METRIC_REGISTRY[mkey]
+                dec    = 3 if c in HIGH_PRECISION_COLS else 2
+                val    = row.get(c)
+                fmt    = _fmt(val, dec)
+                if invalid:
+                    fmt = _italic(fmt)
+                elif winner_idx.get(c) == idx:
+                    fmt = _bold(fmt)
+                cells.append(fmt)
+                continue
+
+            # Rank cols and totalrank
+            val = row.get(c)
+            fmt = _fmt(val, 2)
+            if invalid:
+                fmt = _italic(fmt)
+            elif winner_idx.get(c) == idx:
+                fmt = _bold(fmt)
+            cells.append(fmt)
+
+        rows.append(" & ".join(cells) + r" \\")
+
+    body = "\n    ".join(rows)
+
+    return (
+        rf"\begin{{{table_env}}}[!t]" "\n"
+        r"\centering" "\n"
+        r"\footnotesize" "\n"
+        rf"\caption{{{caption}}}" "\n"
+        rf"\label{{{label}}}" "\n"
+        rf"\begin{{tabular}}{{{spec}}}" "\n"
+        r"\hline" "\n"
+        f"    {header_row}\n"
+        r"\hline" "\n"
+        f"    {body}\n"
+        r"\hline" "\n"
+        r"\end{tabular}" "\n"
+        rf"\end{{{table_env}}}"
+    )
+
+
+# ── Comparison ranked table (section_type == "comparison") ───────────────────
+
+def comparison_ranked_table(
+    summary_df, ranked_df, grouped_df,
+    experiments_cfg, groups_cfg,
+    params_columns, metrics,
+    caption, label,
+):
+    """
+    Combined ranked + grouped table for direct comparison between two
+    objective functions (Baseline vs Proposed).
+
+    Upper block columns: ID | PARAMS_COLUMNS | METRICS (result cols) | totalrank
+    Rows are sorted by group_id then by rank_group within each group.
+    - Italic: rows that did not pass the pct_threshold (is_valid == False)
+    - Bold per group_id: winner of each metric col and totalrank
+      (excluding invalid rows)
+
+    Below a double \\hline, a second summary block reports n_s/N and
+    group_rank per rank_group (e.g. Baseline vs Proposed), using the same
+    winner-detection logic as grouped_ranked_table. The summary block's
+    label column auto-computes a fixed width (via \\multicolumn{...}{p{Xcm}})
+    so its descriptive text wraps onto multiple lines instead of widening
+    the table beyond what the upper block already determines.
+    """
+    active  = _active_metrics(metrics)
+    has_valid = "is_valid" in summary_df.columns
+
+    # ── Determine n_total from number of group_ids per rank_group ────────────
+    # Each rank_group spans all group_ids → n_total = count of unique group_ids
+    if "group_id" in summary_df.columns:
+        n_total = summary_df["group_id"].nunique()
+    else:
+        n_total = 4
+
+    # ── Build per-experiment lookup from experiments_cfg ─────────────────────
+    # key: experiment key → cfg dict (with "id", "group_id", "rank_group", params...)
+    exp_lookup = {}
+    for ekey, cfg in experiments_cfg.items():
+        exp_id = cfg.get("id", ekey)
+        exp_lookup[exp_id] = cfg
+
+    # ── Merge summary_df with experiments_cfg to get params cols ─────────────
+    param_keys = [k for k, _ in params_columns]
+
+    df = summary_df.copy()
+
+    # Always overwrite param cols from experiments_cfg (not raw log values)
+    def _get_param(exp_id, key):
+        return exp_lookup.get(exp_id, {}).get(key, "")
+
+    for pk in param_keys:
+        df[pk] = df["experiment_id"].apply(lambda eid, k=pk: _get_param(eid, k))
+
+    # Attach rank_group and group_id from cfg if not already present
+    if "rank_group" not in df.columns:
+        df["rank_group"] = df["experiment_id"].apply(
+            lambda eid: exp_lookup.get(eid, {}).get("rank_group", "")
+        )
+    if "group_id" not in df.columns:
+        df["group_id"] = df["experiment_id"].apply(
+            lambda eid: exp_lookup.get(eid, {}).get("group_id", "")
+        )
+
+    # Attach totalrank from ranked_df
+    if "totalrank" not in df.columns and ranked_df is not None and "totalrank" in ranked_df.columns:
+        tr_lookup = ranked_df.set_index("experiment_id")["totalrank"].to_dict()
+        df["totalrank"] = df["experiment_id"].map(tr_lookup)
+
+    # ── Sort: by group_id then rank_group ────────────────────────────────────
+    def _sort_key(row):
+        gid  = str(row.get("group_id", ""))
+        rg   = str(row.get("rank_group", ""))
+        return _parse_id(gid) + _parse_id(rg)
+
+    df["_sort_key"] = df.apply(_sort_key, axis=1)
+    df = df.sort_values("_sort_key").drop(columns="_sort_key").reset_index(drop=True)
+
+    # ── Determine grouped winner (for the summary block bold+underline) ──────
+    grouped_winner_id  = None
+    grouped_winning_by = ""
+    if grouped_df is not None and not grouped_df.empty and "success_count" in grouped_df.columns:
+        sorted_w = grouped_df.sort_values(
+            ["success_count", "totalrank"], ascending=[False, True]
+        )
+        grouped_winner_id  = sorted_w.iloc[0]["experiment_id"]
+        grouped_winning_by = sorted_w.iloc[0].get("winning_criterion", "")
+        if not grouped_winning_by and len(sorted_w) > 1:
+            grouped_winning_by = (
+                "success_count"
+                if sorted_w.iloc[0]["success_count"] > sorted_w.iloc[1]["success_count"]
+                else "totalrank"
+            )
+
+    # ── Per-group_id winners for metric cols and totalrank ───────────────────
+    # winner_map[group_id][col] = index of winning row
+    winner_map = {}
+    for gid, grp in df.groupby("group_id"):
+        valid_grp = grp[grp["is_valid"] == True] if has_valid else grp
+        winner_map[gid] = {}
+
+        for mkey in active:
+            res_col, _, hib, _, _, _, _ = _METRIC_REGISTRY[mkey]
+            if res_col not in df.columns:
+                continue
+            if valid_grp.empty:
+                continue
+            series = valid_grp[res_col].astype(float)
+            best_idx = series.idxmax() if hib else series.idxmin()
+            winner_map[gid][res_col] = best_idx
+
+        if "totalrank" in df.columns and not valid_grp.empty:
+            series = valid_grp["totalrank"].astype(float)
+            winner_map[gid]["totalrank"] = series.idxmin()
+
+    # ── Column spec (upper block) ─────────────────────────────────────────────
+    # ID | param cols | metric result cols | totalrank
+    metric_res_cols = [_METRIC_REGISTRY[m][0] for m in active]
+    metric_headers  = {_METRIC_REGISTRY[m][0]: _METRIC_REGISTRY[m][1] for m in active}
+
+    all_col_keys = (
+        ["experiment_id"]
+        + param_keys
+        + metric_res_cols
+        + ["totalrank"]
+    )
+    col_headers = {
+        "experiment_id": "ID",
+        "totalrank":     _TOTALRANK_HDR[0],
+        **{k: h for k, h in params_columns},
+        **metric_headers,
+    }
+    col_align_map = {
+        "experiment_id": "l",
+        "totalrank":     "r",
+        **{k: "l" for k in param_keys},
+        **{_METRIC_REGISTRY[m][0]: _METRIC_REGISTRY[m][6] for m in active},
+    }
+    n_cols = len(all_col_keys)
+
+    spec       = "@{}" + "".join(col_align_map[c] for c in all_col_keys) + "@{}"
+    header_row = " & ".join(_bold(col_headers[c]) for c in all_col_keys) + r" \\"
+
+    # ── Build rows (upper block) ──────────────────────────────────────────────
+    rows        = []
+    prev_gid    = None
+
+    for idx, row in df.iterrows():
+        gid     = row.get("group_id", "")
+        invalid = has_valid and (row.get("is_valid") == False)
+
+        # separator between group_id blocks (scene+method pairs)
+        if prev_gid is not None and gid != prev_gid:
+            rows.append(r"\noalign{\smallskip}")
+        prev_gid = gid
+
+        cells = []
+
+        # ID
+        cells.append(str(row.get("experiment_id", "")))
+
+        # PARAMS_COLUMNS
+        for pk in param_keys:
+            cells.append(str(row.get(pk, "")))
+
+        # METRIC result cols
+        for mkey in active:
+            res_col, _, _, _, _, _, _ = _METRIC_REGISTRY[mkey]
+            if res_col not in df.columns:
+                cells.append("--")
+                continue
+            val = row.get(res_col)
+            dec = 3 if res_col in HIGH_PRECISION_COLS else 2
+            fmt_val = _fmt(val, dec)
+
+            if invalid:
+                fmt_val = _italic(fmt_val)
+            elif winner_map.get(gid, {}).get(res_col) == idx:
+                fmt_val = _bold(fmt_val)
+
+            cells.append(fmt_val)
+
+        # totalrank
+        tr_val = row.get("totalrank")
+        tr_fmt = _fmt(tr_val, 3)
+        if invalid:
+            tr_fmt = _italic(tr_fmt)
+        elif winner_map.get(gid, {}).get("totalrank") == idx:
+            tr_fmt = _bold(tr_fmt)
+        cells.append(tr_fmt)
+
+        rows.append(" & ".join(cells) + r" \\")
+
+    body = "\n    ".join(rows)
+
+    # ── Summary block (rank_group level: n_s/N and group_rank) ────────────────
+    # Estimate a fixed width (in cm) for the merged label column of the summary
+    # block, based on the number of columns it spans in the upper block, so the
+    # descriptive label wraps onto several lines instead of widening the table
+    # beyond what the upper block determines.
+    n_label_cols   = max(1, n_cols - 2) 
+
+    summary_rows = []
+    ltx_align = r"@{}l"
+    if grouped_df is not None and not grouped_df.empty:
+        grp_sorted = _sort_by_id(grouped_df)
+        for _, grow in grp_sorted.iterrows():
+            rg   = grow["experiment_id"]
+            role = next(
+                (ecfg.get("Role", rg) for ecfg in exp_lookup.values()
+                 if ecfg.get("rank_group") == rg),
+                rg,
+            )
+            ns        = int(grow["success_count"]) if "success_count" in grow else n_total
+            tr        = grow["totalrank"] if "totalrank" in grow.index else float("nan")
+            ns_fmt    = str(ns)
+            tr_fmt    = _fmt(tr, 3) if not pd.isna(tr) else "--"
+            is_winner = (rg == grouped_winner_id)
+
+            if is_winner:
+                role_fmt = _bold(str(role))
+                if grouped_winning_by == "success_count":
+                    ns_fmt = _bold(r"\underline{" + ns_fmt + "}")
+                    tr_fmt = _bold(tr_fmt)
+                else:
+                    ns_fmt = _bold(ns_fmt)
+                    tr_fmt = _bold(r"\underline{" + tr_fmt + "}") if tr_fmt != "--" else _bold(tr_fmt)
+            else:
+                role_fmt = str(role)
+
+
+
+            summary_rows.append(
+                rf"    \multicolumn{{{n_label_cols}}}{{{ltx_align}}}{{{role_fmt}}} & {ns_fmt} \\"
+                if False else
+                rf"    \multicolumn{{{n_label_cols}}}{{{ltx_align}}}{{{role_fmt}}} & {ns_fmt} & {tr_fmt} \\"
+            )
+
+    summary_header = (
+        rf"    \multicolumn{{{n_label_cols}}}{{{ltx_align}}}{{\textbf{{Aggregated Performance}}}} & "
+        rf"$\bm{{n_s/{{{n_total}}}}}$ & "
+        r"$\textbf{group}_{\textbf{rank}}$ \\"
+    )
+
+    summary_block = ""
+    if summary_rows:
+        summary_block = (
+            "\n\\hline\n"
+            "\\noalign{\\smallskip}\n"
+            f"{summary_header}\n"
+            r"\hline" "\n"
+            + "\n".join(summary_rows)
+        )
+
+    return (
+        r"\begin{table}[!t]" "\n"
+        r"\centering" "\n"
+        r"\footnotesize" "\n"
+        rf"\caption{{{caption}}}" "\n"
+        rf"\label{{{label}}}" "\n"
+        rf"\begin{{tabular}}{{{spec}}}" "\n"
+        r"\hline" "\n"
+        f"    {header_row}\n"
+        r"\hline" "\n"
+        f"    {body}\n"
+        f"{summary_block}\n"
+        r"\hline" "\n"
+        r"\end{tabular}" "\n"
+        r"\end{table}"
+    )
+
+
 # ── Save all tables ───────────────────────────────────────────────────────────
 
 def save_tables(
@@ -485,7 +963,7 @@ def save_tables(
     group_params_columns=None, params_columns=None,
     params_note=None, include_method=True,
     metrics=None,
-    robust_comparison_cfg=None, 
+    robust_comparison_cfg=None,
     section_type="standard",
 ):
     if metrics is None:
@@ -498,8 +976,8 @@ def save_tables(
 
         if experiments_cfg is not None and params_columns is not None:
             p = params_table(experiments_cfg, params_columns,
-                            caption=f"{caption_prefix} experimental mapping and ID definitions.",
-                            label=f"tab:{prefix}_params", note=params_note)
+                             caption=f"{caption_prefix} experimental mapping and ID definitions.",
+                             label=f"tab:{prefix}_params", note=params_note)
             (tables_dir / f"{prefix}_params.tex").write_text(p, encoding="utf-8")
 
         base_df = full_summary if full_summary is not None else ranked_df
@@ -509,7 +987,7 @@ def save_tables(
             base_df["is_valid"] = base_df["is_valid"].fillna(True)
 
         res = results_table(_sort_by_id(base_df),
-                            caption=r"{caption_prefix} results. Bold indicates the winner per metric and italics rows denote configurations excluded due to $\text{Retr.} < 85\%$.",
+                            caption=f"{caption_prefix} results. Bold indicates the winner per metric and italics rows denote configurations excluded due to $\\text{{Retr.}} < 85\\%$.",
                             label=f"tab:{prefix}_results",
                             include_method=include_method, metrics=metrics)
         (tables_dir / f"{prefix}_results.tex").write_text(res, encoding="utf-8")
@@ -517,37 +995,70 @@ def save_tables(
         valid_ranked = (ranked_df[ranked_df["is_valid"] == True].copy()
                         if "is_valid" in ranked_df.columns else ranked_df.copy())
         rnk = ranked_table(_sort_by_id(valid_ranked),
-                        caption=f"{caption_prefix} ranked results. Only non-excluded configurations are displayed; bold indicates the winner per rank.",
-                        label=f"tab:{prefix}_ranked",
-                        include_method=include_method, metrics=metrics)
+                           caption=f"{caption_prefix} ranked results. Only non-excluded configurations are displayed; bold indicates the winner per rank.",
+                           label=f"tab:{prefix}_ranked",
+                           include_method=include_method, metrics=metrics)
         (tables_dir / f"{prefix}_ranked.tex").write_text(rnk, encoding="utf-8")
+
+
+        if experiments_cfg is not None and params_columns is not None:
+            fst = full_summary_table(
+                summary_df      = base_df,
+                ranked_df       = ranked_df,
+                experiments_cfg = experiments_cfg,
+                group_params_columns = group_params_columns,
+                params_columns  = params_columns,
+                metrics         = metrics,
+                caption         = f"{caption_prefix} full summary: parameters, results, and ranks.",
+                label           = f"tab:{prefix}_full_summary",
+                two_col        = True,
+            )
+            (tables_dir / f"{prefix}_full_summary.tex").write_text(fst, encoding="utf-8")
 
         if grouped_df is not None and groups_cfg is not None and group_params_columns is not None:
             grp = grouped_ranked_table(groups_cfg, grouped_df, group_params_columns,
-                                    caption=r"{caption_prefix} grouped ranked results. Bold indicates the winning configuration; underlines denote the specific metric ($n_s/4$ or $\text{group}_{\text{rank}}$) that determined the selection.",
-                                    label=f"tab:{prefix}_grouped_ranked")
+                                       caption=f"{caption_prefix} grouped ranked results. Bold indicates the winning configuration; underlines denote the specific metric ($n_s/4$ or $\\text{{group}}_{{\\text{{rank}}}}$) that determined the selection.",
+                                       label=f"tab:{prefix}_grouped_ranked")
             (tables_dir / f"{prefix}_grouped_ranked.tex").write_text(grp, encoding="utf-8")
 
-        
-        # ── Robust comparison table (robust_comparison section only) ─────────────
+        # ── Robust comparison table ───────────────────────────────────────────
         if robust_comparison_cfg is not None and grouped_df is not None:
             rc = robust_comparison_table(
-                ranked_df            = ranked_df,
-                grouped_df           = grouped_df,
-                experiments_cfg      = experiments_cfg or {},
-                baseline_rg          = robust_comparison_cfg["baseline_rg"],
+                ranked_df               = ranked_df,
+                grouped_df              = grouped_df,
+                experiments_cfg         = experiments_cfg or {},
+                baseline_rg             = robust_comparison_cfg["baseline_rg"],
                 delta_f_min_improvement = robust_comparison_cfg["delta_f_min_improvement"],
-                caption              = f"{caption_prefix} experiments mu selection summary.",
-                label                = f"tab:{prefix}_mu_selection",
+                caption                 = f"{caption_prefix} experiments mu selection summary.",
+                label                   = f"tab:{prefix}_mu_selection",
             )
-            (tables_dir / f"{prefix}_mu_selection.tex").write_text(
-                rc, encoding="utf-8"
-            )
+            (tables_dir / f"{prefix}_mu_selection.tex").write_text(rc, encoding="utf-8")
 
         print(f"  Tables -> {tables_dir}/{prefix}_{{params,results,ranked,grouped_ranked}}.tex")
 
     elif section_type == "comparison":
-        pass 
+        if experiments_cfg is None or params_columns is None:
+            raise ValueError("comparison section_type requires experiments_cfg and params_columns")
+
+        base_df = full_summary if full_summary is not None else ranked_df
+        if "is_valid" not in base_df.columns and "is_valid" in ranked_df.columns:
+            valid_col = ranked_df[["experiment_id", "is_valid"]].drop_duplicates()
+            base_df   = base_df.merge(valid_col, on="experiment_id", how="left")
+            base_df["is_valid"] = base_df["is_valid"].fillna(True)
+
+        cmp = comparison_ranked_table(
+            summary_df      = base_df,
+            ranked_df       = ranked_df,
+            grouped_df      = grouped_df,
+            experiments_cfg = experiments_cfg,
+            groups_cfg      = groups_cfg or {},
+            params_columns  = params_columns,
+            metrics         = metrics,
+            caption         = f"{caption_prefix} of baseline and proposed objective functions. The upper block details results from each scene-method combination (bold indicates the winner per metric and rank). Lower block presents the aggregated results (bold indicates the winning configuration; underline denotes the specific criterion that determined the selection).",
+            label           = f"tab:{prefix}_comparison",
+        )
+        (tables_dir / f"{prefix}_comparison.tex").write_text(cmp, encoding="utf-8")
+        print(f"  Tables -> {tables_dir}/{prefix}_comparison.tex")
 
     else:
         raise ValueError(f"Unknown section_type: {section_type!r}")

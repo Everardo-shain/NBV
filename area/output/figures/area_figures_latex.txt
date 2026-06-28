@@ -1,0 +1,17 @@
+\begin{figure*}[!t]
+	\centering		\includegraphics[keepaspectratio,width=18.2cm]{./Figures/area_analysis.png}
+	\caption[Area factor analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.]{Area factor analysis: (a) total rank distribution across scene–method configurations, grey cells indicate configurations excluded for falling below the retrieval threshold; (b) mean group rank comparison, red indicates the winner and hatched bars denote $n_s$ below the maximum success count.}
+	\label{fig:area_analysis}
+\end{figure*}
+
+\begin{figure}[!t]
+	\centering		\includegraphics[keepaspectratio,width=8.89cm]{./Figures/area_heatmap.png}
+	\caption[Area factor total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.]{Area factor total rank distribution. Grey cells indicate configurations excluded for falling below the retrieval threshold.}
+	\label{fig:area_heatmap}
+\end{figure}
+
+\begin{figure}[!t]
+	\centering		\includegraphics[keepaspectratio,width=8.89cm]{./Figures/area_bar_chart.png}
+	\caption[Area factor mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.]{Area factor mean performance comparison. Red indicates the winning configuration; hatched bars denote parameter groups with $n_s$ below the maximum success count.}
+	\label{fig:area_bar_chart}
+\end{figure}

@@ -1,0 +1,30 @@
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Objective function final comparison of baseline and proposed objective functions. The upper block details results from each scene-method combination (bold indicates the winner per metric and rank). Lower block presents the aggregated results (bold indicates the winning configuration; underline denotes the specific criterion that determined the selection).}
+\label{tab:final_obj_comparison_comparison}
+\begin{tabular}{@{}llllrr@{}}
+\hline
+    \textbf{ID} & \textbf{Role} & \textbf{Scene} & \textbf{Method} & \textbf{\thead{Retr.\\ (\%)}} & $\textbf{total}_{\textbf{rank}}$ \\
+\hline
+    3.1.01 & Baseline (Eq. \ref{eq:baseline}) & Model A & ES & \textbf{89.17} & \textbf{0} \\
+    4.1.03 & Proposed (Eq. \ref{eq:proposed}) & Model A & ES & 85.58 & 0.705 \\
+    \noalign{\smallskip}
+    3.2.01 & Baseline (Eq. \ref{eq:baseline}) & Model A & SA & 90.26 & 0.370 \\
+    4.2.03 & Proposed (Eq. \ref{eq:proposed}) & Model A & SA & \textbf{92.21} & \textbf{0} \\
+    \noalign{\smallskip}
+    3.3.01 & Baseline (Eq. \ref{eq:baseline}) & Model B & ES & 86.18 & 0.632 \\
+    4.3.03 & Proposed (Eq. \ref{eq:proposed}) & Model B & ES & \textbf{89.41} & \textbf{0} \\
+    \noalign{\smallskip}
+    3.4.01 & Baseline (Eq. \ref{eq:baseline}) & Model B & SA & 86.16 & 0.595 \\
+    4.4.03 & Proposed (Eq. \ref{eq:proposed}) & Model B & SA & \textbf{89.19} & \textbf{0} \\
+
+\hline
+\noalign{\smallskip}
+    \multicolumn{4}{@{}l}{\textbf{Aggregated Performance}} & $\bm{n_s/{4}}$ & $\textbf{group}_{\textbf{rank}}$ \\
+\hline
+    \multicolumn{4}{@{}l}{Baseline (Eq. \ref{eq:baseline})} & 4 & 0.399 \\
+    \multicolumn{4}{@{}l}{\textbf{Proposed (Eq. \ref{eq:proposed})}} & \textbf{4} & \textbf{\underline{0.176}} \\
+\hline
+\end{tabular}
+\end{table}

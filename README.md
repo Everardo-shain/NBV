@@ -109,7 +109,7 @@ columns for the parameters table. The `id` key is mandatory and is the only
 identifier shown in results and ranked tables.
 ```python
 EXPERIMENTS = {
-    "lab_anne_40": {"id": "1.02", "environment": "Laboratory",
+    "lab_anne_40": {"id": "1.02", "environment": "Model B",
                     "method": "SA", "alpha": 0.40},
     ...
 }

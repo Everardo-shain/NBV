@@ -29,49 +29,52 @@ SECTION_META = {
 # ── Metrics to include ────────────────────────────────────────────────────────
 METRICS = ["distance", "energy", "retrieved", "quality", "time", "delta_f"]
 
+# ── Metrics to include in figures ─────────────────────────────────────────────
+FIG_METRICS = ["distance", "energy", "retrieved", "quality", "time"]
+
 # ── Experiment registry ───────────────────────────────────────────────────────
 EXPERIMENTS = {
     # Study Room — (1+1)-ES
-    "stu_evol_0":   {"id": "7.1.01", "group_id": "7.1", "rank_group": "7.Y.01", "environment": "Study Room",  "method": "ES",            "mu": r"$0$"},
-    "stu_evol_1":  {"id": "7.1.02", "group_id": "7.1", "rank_group": "7.Y.02", "environment": "Study Room",  "method": "ES",            "mu": r"$0.1$"},
-    "stu_evol_2":  {"id": "7.1.03", "group_id": "7.1", "rank_group": "7.Y.03", "environment": "Study Room",  "method": "ES",            "mu": r"$0.2$"},
-    "stu_evol_3":  {"id": "7.1.04", "group_id": "7.1", "rank_group": "7.Y.04", "environment": "Study Room",  "method": "ES",            "mu": r"$0.3$"},
-    "stu_evol_4":  {"id": "7.1.05", "group_id": "7.1", "rank_group": "7.Y.05", "environment": "Study Room",  "method": "ES",            "mu": r"$0.4$"},
-    "stu_evol_5":  {"id": "7.1.06", "group_id": "7.1", "rank_group": "7.Y.06", "environment": "Study Room",  "method": "ES",            "mu": r"$0.5$"},
+    "stu_evol_0":   {"id": "5.1.01", "group_id": "5.1", "rank_group": "5.Y.01", "environment": "Model A",  "method": "ES",            "mu": r"$0$"},
+    "stu_evol_1":  {"id": "5.1.02", "group_id": "5.1", "rank_group": "5.Y.02", "environment": "Model A",  "method": "ES",            "mu": r"$0.1$"},
+    "stu_evol_2":  {"id": "5.1.03", "group_id": "5.1", "rank_group": "5.Y.03", "environment": "Model A",  "method": "ES",            "mu": r"$0.2$"},
+    "stu_evol_3":  {"id": "5.1.04", "group_id": "5.1", "rank_group": "5.Y.04", "environment": "Model A",  "method": "ES",            "mu": r"$0.3$"},
+    "stu_evol_4":  {"id": "5.1.05", "group_id": "5.1", "rank_group": "5.Y.05", "environment": "Model A",  "method": "ES",            "mu": r"$0.4$"},
+    "stu_evol_5":  {"id": "5.1.06", "group_id": "5.1", "rank_group": "5.Y.06", "environment": "Model A",  "method": "ES",            "mu": r"$0.5$"},
 
     # Study Room — Simulated Annealing
-    "stu_anne_0":   {"id": "7.2.01", "group_id": "7.2", "rank_group": "7.Y.01", "environment": "Study Room",  "method": "SA", "mu": r"$0$"},
-    "stu_anne_1":  {"id": "7.2.02", "group_id": "7.2", "rank_group": "7.Y.02", "environment": "Study Room",  "method": "SA", "mu": r"$0.1$"},
-    "stu_anne_2":  {"id": "7.2.03", "group_id": "7.2", "rank_group": "7.Y.03", "environment": "Study Room",  "method": "SA", "mu": r"$0.2$"},
-    "stu_anne_3":  {"id": "7.2.04", "group_id": "7.2", "rank_group": "7.Y.04", "environment": "Study Room",  "method": "SA", "mu": r"$0.3$"},
-    "stu_anne_4":  {"id": "7.2.05", "group_id": "7.2", "rank_group": "7.Y.05", "environment": "Study Room",  "method": "SA", "mu": r"$0.4$"},
-    "stu_anne_5":  {"id": "7.2.06", "group_id": "7.2", "rank_group": "7.Y.06", "environment": "Study Room",  "method": "SA", "mu": r"$0.5$"},
+    "stu_anne_0":   {"id": "5.2.01", "group_id": "5.2", "rank_group": "5.Y.01", "environment": "Model A",  "method": "SA", "mu": r"$0$"},
+    "stu_anne_1":  {"id": "5.2.02", "group_id": "5.2", "rank_group": "5.Y.02", "environment": "Model A",  "method": "SA", "mu": r"$0.1$"},
+    "stu_anne_2":  {"id": "5.2.03", "group_id": "5.2", "rank_group": "5.Y.03", "environment": "Model A",  "method": "SA", "mu": r"$0.2$"},
+    "stu_anne_3":  {"id": "5.2.04", "group_id": "5.2", "rank_group": "5.Y.04", "environment": "Model A",  "method": "SA", "mu": r"$0.3$"},
+    "stu_anne_4":  {"id": "5.2.05", "group_id": "5.2", "rank_group": "5.Y.05", "environment": "Model A",  "method": "SA", "mu": r"$0.4$"},
+    "stu_anne_5":  {"id": "5.2.06", "group_id": "5.2", "rank_group": "5.Y.06", "environment": "Model A",  "method": "SA", "mu": r"$0.5$"},
 
     # Laboratory — (1+1)-ES
-    "lab_evol_0":   {"id": "7.3.01", "group_id": "7.3", "rank_group": "7.Y.01", "environment": "Laboratory",  "method": "ES",            "mu": r"$0$"},
-    "lab_evol_1":  {"id": "7.3.02", "group_id": "7.3", "rank_group": "7.Y.02", "environment": "Laboratory",  "method": "ES",            "mu": r"$0.1$"},
-    "lab_evol_2":  {"id": "7.3.03", "group_id": "7.3", "rank_group": "7.Y.03", "environment": "Laboratory",  "method": "ES",            "mu": r"$0.2$"},
-    "lab_evol_3":  {"id": "7.3.04", "group_id": "7.3", "rank_group": "7.Y.04", "environment": "Laboratory",  "method": "ES",            "mu": r"$0.3$"},
-    "lab_evol_4":  {"id": "7.3.05", "group_id": "7.3", "rank_group": "7.Y.05", "environment": "Laboratory",  "method": "ES",            "mu": r"$0.4$"},
-    "lab_evol_5":  {"id": "7.3.06", "group_id": "7.3", "rank_group": "7.Y.06", "environment": "Laboratory",  "method": "ES",            "mu": r"$0.5$"},
+    "lab_evol_0":   {"id": "5.3.01", "group_id": "5.3", "rank_group": "5.Y.01", "environment": "Model B",  "method": "ES",            "mu": r"$0$"},
+    "lab_evol_1":  {"id": "5.3.02", "group_id": "5.3", "rank_group": "5.Y.02", "environment": "Model B",  "method": "ES",            "mu": r"$0.1$"},
+    "lab_evol_2":  {"id": "5.3.03", "group_id": "5.3", "rank_group": "5.Y.03", "environment": "Model B",  "method": "ES",            "mu": r"$0.2$"},
+    "lab_evol_3":  {"id": "5.3.04", "group_id": "5.3", "rank_group": "5.Y.04", "environment": "Model B",  "method": "ES",            "mu": r"$0.3$"},
+    "lab_evol_4":  {"id": "5.3.05", "group_id": "5.3", "rank_group": "5.Y.05", "environment": "Model B",  "method": "ES",            "mu": r"$0.4$"},
+    "lab_evol_5":  {"id": "5.3.06", "group_id": "5.3", "rank_group": "5.Y.06", "environment": "Model B",  "method": "ES",            "mu": r"$0.5$"},
 
     # Laboratory — Simulated Annealing
-    "lab_anne_0":   {"id": "7.4.01", "group_id": "7.4", "rank_group": "7.Y.01", "environment": "Laboratory",  "method": "SA", "mu": r"$0$"},
-    "lab_anne_1":  {"id": "7.4.02", "group_id": "7.4", "rank_group": "7.Y.02", "environment": "Laboratory",  "method": "SA", "mu": r"$0.1$"},
-    "lab_anne_2":  {"id": "7.4.03", "group_id": "7.4", "rank_group": "7.Y.03", "environment": "Laboratory",  "method": "SA", "mu": r"$0.2$"},
-    "lab_anne_3":  {"id": "7.4.04", "group_id": "7.4", "rank_group": "7.Y.04", "environment": "Laboratory",  "method": "SA", "mu": r"$0.3$"},
-    "lab_anne_4":  {"id": "7.4.05", "group_id": "7.4", "rank_group": "7.Y.05", "environment": "Laboratory",  "method": "SA", "mu": r"$0.4$"},
-    "lab_anne_5":  {"id": "7.4.06", "group_id": "7.4", "rank_group": "7.Y.06", "environment": "Laboratory",  "method": "SA", "mu": r"$0.5$"},
+    "lab_anne_0":   {"id": "5.4.01", "group_id": "5.4", "rank_group": "5.Y.01", "environment": "Model B",  "method": "SA", "mu": r"$0$"},
+    "lab_anne_1":  {"id": "5.4.02", "group_id": "5.4", "rank_group": "5.Y.02", "environment": "Model B",  "method": "SA", "mu": r"$0.1$"},
+    "lab_anne_2":  {"id": "5.4.03", "group_id": "5.4", "rank_group": "5.Y.03", "environment": "Model B",  "method": "SA", "mu": r"$0.2$"},
+    "lab_anne_3":  {"id": "5.4.04", "group_id": "5.4", "rank_group": "5.Y.04", "environment": "Model B",  "method": "SA", "mu": r"$0.3$"},
+    "lab_anne_4":  {"id": "5.4.05", "group_id": "5.4", "rank_group": "5.Y.05", "environment": "Model B",  "method": "SA", "mu": r"$0.4$"},
+    "lab_anne_5":  {"id": "5.4.06", "group_id": "5.4", "rank_group": "5.Y.06", "environment": "Model B",  "method": "SA", "mu": r"$0.5$"},
 }
 
 # ── Groups ────────────────────────────────────────────────────────────────────
 GROUPS = {
-    "7.Y.01": {"mu": r"$0$"},
-    "7.Y.02": {"mu": r"$0.1$"},
-    "7.Y.03": {"mu": r"$0.2$"},
-    "7.Y.04": {"mu": r"$0.3$"},
-    "7.Y.05": {"mu": r"$0.4$"},
-    "7.Y.06": {"mu": r"$0.5$"},
+    "5.Y.01": {"mu": r"$0$"},
+    "5.Y.02": {"mu": r"$0.1$"},
+    "5.Y.03": {"mu": r"$0.2$"},
+    "5.Y.04": {"mu": r"$0.3$"},
+    "5.Y.05": {"mu": r"$0.4$"},
+    "5.Y.06": {"mu": r"$0.5$"},
 }
 
 GROUP_PARAMS_COLUMNS = [
@@ -94,7 +97,7 @@ TOTALRANK_FORMULA = lambda drank, erank, retrrank, qrank, timerank: (
 
 # ── Robust comparison specific configuration ──────────────────────────────────
 ROBUST_COMPARISON        = True
-ROBUST_BASELINE_RG       = "7.Y.01"   # mu=0
+ROBUST_BASELINE_RG       = "5.Y.01"   # mu=0
 DELTA_F_MIN_IMPROVEMENT  = 10.0       # minimum % improvement in delta_f to
                                        # consider a mu value as robust
 
